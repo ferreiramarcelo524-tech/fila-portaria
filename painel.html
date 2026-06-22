@@ -7,7 +7,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
     <style>
-        :root { --bg-primary: #f0f4f8; --surface: #ffffff; --text-main: #2c3e50; --primary: #0f52ba; --primary-hover: #0a3d8c; --success: #2ecc71; --travel: #e67e22; --border: #dcdde1; }
+        :root { --bg-primary: #f0f4f8; --surface: #ffffff; --text-main: #2c3e50; --primary: #0f52ba; --primary-hover: #0a3d8c; --success: #2ecc71; --travel: #e67e22; --danger: #e74c3c; --border: #dcdde1; }
         body { font-family: 'Segoe UI', Arial, sans-serif; background-color: var(--bg-primary); color: var(--text-main); margin: 0; padding: 20px; }
         .container { max-width: 1400px; margin: 0 auto; }
         header { display: flex; justify-content: space-between; align-items: center; background: var(--primary); color: white; padding: 15px 30px; border-radius: 8px; margin-bottom: 25px; }
@@ -15,9 +15,10 @@
         .card { background: var(--surface); padding: 20px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 25px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
         .card h2 { margin-top: 0; font-size: 1.15rem; border-bottom: 2px solid var(--bg-primary); padding-bottom: 12px; color: var(--primary); }
         .card.historico h2 { color: var(--travel); }
-        .btn-action { padding: 6px 12px; font-size: 0.85rem; border-radius: 4px; border: none; cursor: pointer; color: white; font-weight: 600; }
+        .btn-action { padding: 6px 12px; font-size: 0.85rem; border-radius: 4px; border: none; cursor: pointer; color: white; font-weight: 600; margin-right: 5px; }
         .btn-call { background-color: var(--primary); }
         .btn-done { background-color: var(--success); }
+        .btn-cancel { background-color: var(--danger); }
         table { width: 100%; border-collapse: collapse; }
         th, td { text-align: left; padding: 12px; border-bottom: 1px solid #eee; }
         th { background-color: #f8f9fa; color: #5c6b73; }
@@ -38,6 +39,7 @@
         <div id="relogio" style="font-size: 1.2rem; font-weight: bold;">00:00:00</div>
     </header>
 
+    <!-- TABELA 1: FILA DE ESPERA E DOCA -->
     <section class="card">
         <h2>Fila de Espera / Operação Atual</h2>
         <table>
@@ -58,6 +60,7 @@
         <div id="msgPatioVazio" class="empty-msg">Nenhum veículo no pátio ou em doca.</div>
     </section>
 
+    <!-- TABELA 2: HISTÓRICO DE SAÍDAS (EM VIAGEM) -->
     <section class="card historico">
         <h2>Histórico de Saídas (Em Viagem)</h2>
         <table>
@@ -90,7 +93,6 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
-    // Monitoramento em tempo real do banco de dados
     db.collection("fila_patio").onSnapshot((snapshot) => {
         const tabelaPatio = document.getElementById('tabelaPatioCorpo');
         const msgPatio = document.getElementById('msgPatioVazio');
@@ -100,14 +102,11 @@
         
         let noPatio = [];
         let emViagem = [];
-        
-        // Mapeia todos os registros e verifica duplicatas de placas antigas de viagens anteriores
         let placasAtivas = {};
 
-        // Primeiro passo: Identifica quem está no pátio agora para evitar que registros antigos de viagem poluam a tela
         snapshot.forEach((doc) => {
             const dados = { id: doc.id, ...doc.data() };
-            if (dados.status !== 'Em Viagem' && dados.status !== 'Concluido') {
+            if (dados.status !== 'Em Viagem' && dados.status !== 'Concluido' && dados.status !== 'Cancelado') {
                 placasAtivas[dados.placa] = dados.timestampChegada;
             }
         });
@@ -115,8 +114,10 @@
         snapshot.forEach((doc) => {
             const dados = { id: doc.id, ...doc.data() };
             
+            // Ignora registros marcados como Cancelados do painel
+            if (dados.status === 'Cancelado') return;
+
             if(dados.status === 'Em Viagem') {
-                // Se essa placa fez um check-in mais recente no pátio, ignora o histórico antigo de viagem
                 if (placasAtivas[dados.placa] && placasAtivas[dados.placa] > dados.timestampChegada) {
                     return; 
                 }
@@ -126,10 +127,7 @@
             }
         });
 
-        // Ordena fila do pátio por ordem de chegada (mais antigo primeiro)
         noPatio.sort((a, b) => a.timestampChegada - b.timestampChegada);
-        
-        // Ordena histórico de viagem por quem saiu por último
         emViagem.sort((a, b) => b.timestampSaida - a.timestampSaida);
 
         // --- RENDERIZAR TABELA 1 (PÁTIO / DOCA) ---
@@ -140,9 +138,13 @@
             msgPatio.style.display = 'none';
             noPatio.forEach((v, idx) => {
                 const tr = document.createElement('tr');
-                let btn = v.status === 'Aguardando' ? 
+                
+                let btnAcao = v.status === 'Aguardando' ? 
                     `<button class="btn-action btn-call" onclick="chamar('${v.id}')">Chamar Doca</button>` :
                     `<button class="btn-action btn-done" onclick="liberar('${v.id}')">Liberar para Viagem</button>`;
+                
+                // Botão de cancelamento visível para qualquer registro ativo no pátio
+                let btnCancelar = `<button class="btn-action btn-cancel" onclick="cancelarChegada('${v.id}', '${v.placa}')">Cancelar</button>`;
 
                 tr.innerHTML = `
                     <td><strong>${v.status === 'Aguardando' ? (idx + 1) + 'º' : '-'}</strong></td>
@@ -152,7 +154,7 @@
                     <td>${new Date(v.timestampChegada).toLocaleTimeString('pt-BR')}</td>
                     <td><span class="badge status-${v.status.toLowerCase().replace(/ /g, '-')}">${v.status}</span></td>
                     <td>${v.status === 'Em Doca' ? `Doca: ${v.doca} (${v.conferente})` : '-'}</td>
-                    <td>${btn}</td>
+                    <td>${btnAcao}${btnCancelar}</td>
                 `;
                 tabelaPatio.appendChild(tr);
             });
@@ -200,6 +202,17 @@
             db.collection("fila_patio").doc(id).update({ 
                 status: "Em Viagem",
                 timestampSaida: Date.now()
+            });
+        }
+    };
+
+    // FUNÇÃO QUE DETECTA E REMOVE O REGISTRO CASO PRECISE CANCELAR
+    window.cancelarChegada = (id, placa) => {
+        if (confirm(`Deseja realmente CANCELAR e remover o veículo com placa ${placa} da fila?`)) {
+            db.collection("fila_patio").doc(id).update({
+                status: "Cancelado"
+            }).catch(err => {
+                alert("Erro ao tentar cancelar: " + err.message);
             });
         }
     };
