@@ -16,7 +16,7 @@
         .container { width: 100%; max-width: 450px; background: white; padding: 30px 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); text-align: center; }
         .hidden { display: none !important; }
         button { width: 100%; padding: 14px; background-color: var(--primary); color: white; border: none; border-radius: 6px; font-size: 1rem; font-weight: bold; cursor: pointer; margin-top: 15px; }
-        input { width: 100%; padding: 14px; margin: 10px 0 20px 0; border: 2px solid #dcdde1; border-radius: 6px; box-sizing: border-box; font-size: 1.2rem; text-align: center; font-weight: bold; text-transform: uppercase; }
+        input { width: 100%; padding: 14px; margin: 10px 0 20px 0; border: 2px solid #dcdde1; border-radius: 6px; box-sizing: border-box; font-size: 1.4rem; text-align: center; font-weight: bold; text-transform: uppercase; letter-spacing: 2px; }
         #reader { width: 100%; background: #000; border-radius: 8px; overflow: hidden; margin-top: 15px; min-height: 250px; }
         .user-info { background: #e8f0fe; padding: 12px; border-radius: 6px; font-size: 0.9rem; margin-bottom: 20px; border: 1px solid #d2e3fc; text-align: left; }
     </style>
@@ -40,8 +40,9 @@
         </div>
 
         <div id="bloco-formulario">
-            <label for="placa" style="display:block; text-align:left; font-weight:bold; font-size: 0.9rem;">DIGITE A PLACA DO VEÍCULO:</label>
-            <input type="text" id="placa" placeholder="ABC1D23" maxlength="8">
+            <label for="placa" style="display:block; text-align:left; font-weight:bold; font-size: 0.9rem;">DIGITE A PLACA DO VEÍCULO (COM HÍFEN):</label>
+            <!-- Alterado placeholder e tamanho máximo para suportar o hífen -->
+            <input type="text" id="placa" placeholder="KVZ-1J55" maxlength="8">
             
             <p style="text-align: left; font-size: 0.9rem;">⚠️ <strong>Passo Final:</strong> Após preencher os dados, clique abaixo para abrir a câmera e escanear o QR Code de segurança da guarita.</p>
             <button id="btn-abrir-camera">Abrir Câmera e Confirmar Presença</button>
@@ -82,6 +83,15 @@
 
     let html5QrCode;
 
+    // MÁSCARA AUTOMÁTICA: Adiciona o hífen enquanto o motorista digita
+    placaInput.addEventListener('input', (e) => {
+        let value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+        if (value.length > 3) {
+            value = value.substring(0, 3) + '-' + value.substring(3, 7);
+        }
+        e.target.value = value;
+    });
+
     btnLogin.addEventListener('click', () => {
         const provider = new firebase.auth.GoogleAuthProvider();
         auth.signInWithPopup(provider).then((result) => {
@@ -103,15 +113,56 @@
 
     btnCamera.addEventListener('click', () => {
         const placa = placaInput.value.trim().toUpperCase();
-        if(placa.length < 7) {
-            alert("Por favor, preencha a placa corretamente antes de continuar.");
+        const emailMotorista = auth.currentUser.email.toLowerCase();
+
+        // 1º BLOQUEIO: Validação do formato exato (3 letras, hífen, 4 caracteres)
+        const regexPlaca = /^[A-Z]{3}-[0-9][A-Z0-9][0-9]{2}$/;
+        if(!regexPlaca.test(placa)) {
+            alert("🚫 FORMATO DE PLACA INVÁLIDO!\n\nA placa precisa conter obrigatoriamente o hífen separando as letras.\n\nExemplo correto: KVZ-1J55 ou ABC-1234");
             return;
         }
 
+        // 2º BLOQUEIO: Validação Antiduplicidade no Firestore antes de iniciar a câmera
+        db.collection("fila_patio")
+            .where("status", "in", ["Aguardando", "Em Doca"])
+            .get()
+            .then((snapshot) => {
+                let placaDuplicada = false;
+                let emailDuplicado = false;
+
+                snapshot.forEach((doc) => {
+                    const dados = doc.data();
+                    if (dados.placa && dados.placa.toUpperCase() === placa) {
+                        placaDuplicada = true;
+                    }
+                    if (dados.email && dados.email.toLowerCase() === emailMotorista) {
+                        emailDuplicado = true;
+                    }
+                });
+
+                if (placaDuplicada) {
+                    alert("🚫 CADASTRO BLOQUEADO!\n\nEste veículo (Placa) já possui uma entrada ativa na fila e não pode entrar duas vezes.");
+                    return;
+                }
+
+                if (emailDuplicado) {
+                    alert("🚫 CADASTRO BLOQUEADO!\n\nEste e-mail do Google já possui uma entrada ativa na fila do pátio.");
+                    return;
+                }
+
+                // Se passou nos bloqueios de duplicidade, abre a câmera para ler o QR Code
+                executarAberturaCamera();
+
+            }).catch((error) => {
+                console.error("Erro na validação de antifraude: ", error);
+                alert("Erro ao validar dados no servidor. Verifique sua conexão de internet.");
+            });
+    });
+
+    function executarAberturaCamera() {
         btnCamera.classList.add('hidden');
         readerDiv.classList.remove('hidden');
 
-        // Inicialização robusta focando na câmera traseira do celular
         html5QrCode = new Html5Qrcode("reader");
         html5QrCode.start(
             { facingMode: "environment" }, 
@@ -121,22 +172,19 @@
                 aspectRatio: 1.0
             },
             (decodedText) => {
-                // Ao ler com sucesso, encerra o uso da câmera e grava no banco
                 html5QrCode.stop().then(() => {
                     processarLeituraQRCode(decodedText);
                 }).catch(err => {
                     processarLeituraQRCode(decodedText); 
                 });
             },
-            (errorMessage) => {
-                // Monitoramento em segundo plano (pode ignorar logs rápidos)
-            }
+            (errorMessage) => {}
         ).catch(err => {
-            alert("Erro ao abrir a câmera! Lembre-se de usar o navegador Google Chrome comum e aceitar a permissão de câmera.\n\nDetalhe: " + err);
+            alert("Erro ao abrir a câmera! Use o navegador Google Chrome comum e aceite a permissão.\n\nDetalhe: " + err);
             btnCamera.classList.remove('hidden');
             readerDiv.classList.add('hidden');
         });
-    });
+    }
 
     function processarLeituraQRCode(textoEscaneado) {
         const PALAVRA_CHAVE_OFICIAL = "PORTARIA_CD84_VALIDADO"; 
@@ -146,7 +194,7 @@
             db.collection("fila_patio").add({
                 placa: placaInput.value.trim().toUpperCase(),
                 motorista: auth.currentUser.displayName || "Motorista",
-                email: auth.currentUser.email,
+                email: auth.currentUser.email.toLowerCase(),
                 timestampChegada: Date.now(),
                 status: "Aguardando",
                 doca: "-",
