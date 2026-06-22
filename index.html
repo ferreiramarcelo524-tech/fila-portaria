@@ -3,11 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Teste de Check-in - Sem Câmera</title>
+    <title>Check-in Motorista - Portaria</title>
     
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    <script src="https://unpkg.com/html5-qrcode"></script>
 
     <style>
         :root { --primary: #0f52ba; --success: #2ecc71; --bg: #f5f6fa; --text: #2c3e50; }
@@ -16,23 +17,22 @@
         .hidden { display: none !important; }
         button { width: 100%; padding: 14px; background-color: var(--primary); color: white; border: none; border-radius: 6px; font-size: 1rem; font-weight: bold; cursor: pointer; margin-top: 15px; }
         input { width: 100%; padding: 14px; margin: 10px 0 20px 0; border: 2px solid #dcdde1; border-radius: 6px; box-sizing: border-box; font-size: 1.2rem; text-align: center; font-weight: bold; text-transform: uppercase; }
+        #reader { width: 100%; background: #000; border-radius: 8px; overflow: hidden; margin-top: 15px; min-height: 250px; }
         .user-info { background: #e8f0fe; padding: 12px; border-radius: 6px; font-size: 0.9rem; margin-bottom: 20px; border: 1px solid #d2e3fc; text-align: left; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>Check-in Eletrônico (MODO TESTE)</h2>
-    <p>Validação de Conectividade do Banco</p>
+    <h2>Check-in Eletrônico</h2>
+    <p>Validação Antifraude de Entrada</p>
     <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
 
-    <!-- ETAPA 1: LOGIN -->
     <div id="secao-login">
         <p>Para iniciar o seu registro, valide a sua identidade usando a conta de e-mail do seu aparelho celular.</p>
         <button id="btn-login">Entrar com Conta Google</button>
     </div>
 
-    <!-- ETAPA 2: OPERAÇÃO (SEM CÂMERA) -->
     <div id="secao-operacao" class="hidden">
         <div class="user-info">
             Identificado como:<br>
@@ -43,16 +43,17 @@
             <label for="placa" style="display:block; text-align:left; font-weight:bold; font-size: 0.9rem;">DIGITE A PLACA DO VEÍCULO:</label>
             <input type="text" id="placa" placeholder="ABC1D23" maxlength="8">
             
-            <p style="text-align: left; font-size: 0.9rem;">⚙️ **Simulação de Portaria:** Como a câmera foi desativada para este teste, clique no botão abaixo para tentar gravar a placa direto no painel.</p>
-            <button id="btn-confirmar-teste">Simular Envio para o Painel</button>
+            <p style="text-align: left; font-size: 0.9rem;">⚠️ <strong>Passo Final:</strong> Após preencher os dados, clique abaixo para abrir a câmera e escanear o QR Code de segurança da guarita.</p>
+            <button id="btn-abrir-camera">Abrir Câmera e Confirmar Presença</button>
         </div>
+
+        <div id="reader" class="hidden"></div>
     </div>
 
-    <!-- ETAPA 3: SUCESSO -->
     <div id="secao-sucesso" class="hidden">
         <div style="font-size: 5rem; color: var(--success); margin-bottom: 10px;">✓</div>
-        <h3 style="color: var(--success); margin: 0 0 10px 0;">Check-in Gravado!</h3>
-        <p>A conexão funcionou. Verifique o seu monitor da expedição.</p>
+        <h3 style="color: var(--success); margin: 0 0 10px 0;">Check-in Realizado!</h3>
+        <p>Sua chegada foi gravada. Aguarde no pátio ser chamado pelo painel.</p>
     </div>
 </div>
 
@@ -74,9 +75,12 @@
     const secaoOperacao = document.getElementById('secao-operacao');
     const secaoSucesso = document.getElementById('secao-sucesso');
     const btnLogin = document.getElementById('btn-login');
-    const btnConfirmar = document.getElementById('btn-confirmar-teste');
+    const btnCamera = document.getElementById('btn-abrir-camera');
+    const readerDiv = document.getElementById('reader');
     const userEmailSpan = document.getElementById('user-email');
     const placaInput = document.getElementById('placa');
+
+    let html5QrCode;
 
     btnLogin.addEventListener('click', () => {
         const provider = new firebase.auth.GoogleAuthProvider();
@@ -97,33 +101,72 @@
         secaoOperacao.classList.remove('hidden');
     }
 
-    // DISPARA A GRAVAÇÃO SEM PRECISAR DE QR CODE
-    btnConfirmar.addEventListener('click', () => {
+    btnCamera.addEventListener('click', () => {
         const placa = placaInput.value.trim().toUpperCase();
         if(placa.length < 7) {
             alert("Por favor, preencha a placa corretamente antes de continuar.");
             return;
         }
 
-        db.collection("fila_patio").add({
-            placa: placa,
-            motorista: auth.currentUser.displayName || "Motorista Teste",
-            email: auth.currentUser.email,
-            timestampChegada: Date.now(),
-            status: "Aguardando",
-            doca: "-",
-            conferente: "-"
-        })
-        .then(() => {
-            // Se gravou no banco, joga para a tela verde de sucesso
-            secaoOperacao.classList.add('hidden');
-            secaoSucesso.classList.remove('hidden');
-        })
-        .catch((error) => {
-            // Se travar aqui, o erro vai pular na tela dizendo o motivo exato
-            alert("ERRO DO FIREBASE:\n\n" + error.message + "\n\nSe disser 'Missing or insufficient permissions', precisamos ajustar as Regras do Firestore.");
+        btnCamera.classList.add('hidden');
+        readerDiv.classList.remove('hidden');
+
+        // Inicialização robusta focando na câmera traseira do celular
+        html5QrCode = new Html5Qrcode("reader");
+        html5QrCode.start(
+            { facingMode: "environment" }, 
+            { 
+                fps: 15, 
+                qrbox: { width: 250, height: 250 },
+                aspectRatio: 1.0
+            },
+            (decodedText) => {
+                // Ao ler com sucesso, encerra o uso da câmera e grava no banco
+                html5QrCode.stop().then(() => {
+                    processarLeituraQRCode(decodedText);
+                }).catch(err => {
+                    processarLeituraQRCode(decodedText); 
+                });
+            },
+            (errorMessage) => {
+                // Monitoramento em segundo plano (pode ignorar logs rápidos)
+            }
+        ).catch(err => {
+            alert("Erro ao abrir a câmera! Lembre-se de usar o navegador Google Chrome comum e aceitar a permissão de câmera.\n\nDetalhe: " + err);
+            btnCamera.classList.remove('hidden');
+            readerDiv.classList.add('hidden');
         });
     });
+
+    function processarLeituraQRCode(textoEscaneado) {
+        const PALAVRA_CHAVE_OFICIAL = "PORTARIA_CD84_VALIDADO"; 
+        const textoLimpo = textoEscaneado.trim();
+
+        if (textoLimpo === PALAVRA_CHAVE_OFICIAL) {
+            db.collection("fila_patio").add({
+                placa: placaInput.value.trim().toUpperCase(),
+                motorista: auth.currentUser.displayName || "Motorista",
+                email: auth.currentUser.email,
+                timestampChegada: Date.now(),
+                status: "Aguardando",
+                doca: "-",
+                conferente: "-"
+            })
+            .then(() => {
+                secaoOperacao.classList.add('hidden');
+                secaoSucesso.classList.remove('hidden');
+            })
+            .catch((error) => {
+                alert("Erro ao salvar no painel: " + error.message);
+                btnCamera.classList.remove('hidden');
+                readerDiv.classList.add('hidden');
+            });
+        } else {
+            alert("Código Lido Inválido!\n\nVocê leu: '" + textoLimpo + "'\n\nO aplicativo espera o QR Code da Guarita com o texto: PORTARIA_CD84_VALIDADO");
+            btnCamera.classList.remove('hidden');
+            readerDiv.classList.add('hidden');
+        }
+    }
 </script>
 </body>
 </html>
