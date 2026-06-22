@@ -143,8 +143,12 @@
                     `<button class="btn-action btn-call" onclick="chamar('${v.id}')">Chamar Doca</button>` :
                     `<button class="btn-action btn-done" onclick="liberar('${v.id}')">Liberar para Viagem</button>`;
                 
-                // Botão de Edição inserido entre a ação principal e o cancelamento
-                let btnEditar = `<button class="btn-action btn-edit" onclick="editarRota('${v.id}', '${v.filial || ''}', '${v.doca || ''}', '${v.conferente || ''}')">Editar Rot.</button>`;
+                // O botão de edição só é criado se o veículo já tiver dados de rota (status diferente de Aguardando)
+                let btnEditar = '';
+                if (v.status !== 'Aguardando') {
+                    btnEditar = `<button class="btn-action btn-edit" onclick="editarRota('${v.id}', '${v.filial || ''}', '${v.doca || ''}', '${v.conferente || ''}')">Edit Rota</button>`;
+                }
+                
                 let btnCancelar = `<button class="btn-action btn-cancel" onclick="cancelarChegada('${v.id}', '${v.placa}')">Cancelar</button>`;
 
                 tr.innerHTML = `
@@ -207,13 +211,11 @@
         }
     };
 
-    // FUNÇÃO PARA EDITAR AS INFORMAÇÕES DO VEÍCULO EM OPERAÇÃO
     window.editarRota = (id, filialAtual, docaAtual, conferenteAtual) => {
         const novaFilial = prompt("Editar Filial Destino:", filialAtual);
         const novaDoca = prompt("Editar Número da Doca:", docaAtual);
         const novoConferente = prompt("Editar Nome do Conferente:", conferenteAtual);
         
-        // Se o usuário preencher algo, executa a alteração no banco
         if (novaFilial !== null || novaDoca !== null || novoConferente !== null) {
             const dadosAtualizados = {};
             if (novaFilial !== null) dadosAtualizados.filial = novaFilial.trim();
