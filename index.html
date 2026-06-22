@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Check-in Motorista - Portaria</title>
+    
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
@@ -17,7 +18,7 @@
         button { width: 100%; padding: 14px; background-color: var(--primary); color: white; border: none; border-radius: 6px; font-size: 1rem; font-weight: bold; cursor: pointer; margin-top: 15px; }
         input { width: 100%; padding: 14px; margin: 10px 0 20px 0; border: 2px solid #dcdde1; border-radius: 6px; box-sizing: border-box; font-size: 1.2rem; text-align: center; font-weight: bold; text-transform: uppercase; }
         #reader { width: 100%; background: #000; border-radius: 8px; overflow: hidden; margin-top: 15px; }
-        .status-carregando { color: #7f8c8d; font-weight: bold; padding: 20px; }
+        .user-info { background: #e8f0fe; padding: 12px; border-radius: 6px; font-size: 0.9rem; margin-bottom: 20px; border: 1px solid #d2e3fc; text-align: left; }
     </style>
 </head>
 <body>
@@ -27,18 +28,23 @@
     <p>Validação Antifraude de Entrada</p>
     <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
 
-    <div id="secao-carregando" class="status-carregando">
-        Conectando ao sistema da portaria...
+    <!-- ETAPA 1: LOGIN PELO EMAIL -->
+    <div id="secao-login">
+        <p>Para iniciar o seu registro, valide a sua identidade usando a conta de e-mail do seu aparelho celular.</p>
+        <button id="btn-login">Entrar com Conta Google</button>
     </div>
 
+    <!-- ETAPA 2: FORMULÁRIO E LEITURA DO QR CODE -->
     <div id="secao-operacao" class="hidden">
+        <div class="user-info">
+            Identificado como:<br>
+            <strong id="user-email">Carregando...</strong>
+        </div>
+
         <div id="bloco-formulario">
             <label for="placa" style="display:block; text-align:left; font-weight:bold; font-size: 0.9rem;">DIGITE A PLACA DO VEÍCULO:</label>
             <input type="text" id="placa" placeholder="ABC1D23" maxlength="8">
             
-            <label for="nomeMotorista" style="display:block; text-align:left; font-weight:bold; font-size: 0.9rem; margin-top: 10px;">NOME DO MOTORISTA:</label>
-            <input type="text" id="nomeMotorista" placeholder="DIGITE SEU NOME" style="font-size: 1rem; text-align: left; letter-spacing: 0px;">
-
             <p style="text-align: left; font-size: 0.9rem;">⚠️ <strong>Passo Final:</strong> Após preencher os dados, clique abaixo para abrir a câmera e escanear o QR Code de segurança da guarita.</p>
             <button id="btn-abrir-camera">Abrir Câmera e Confirmar Presença</button>
         </div>
@@ -46,6 +52,7 @@
         <div id="reader" class="hidden"></div>
     </div>
 
+    <!-- SUCESSO -->
     <div id="secao-sucesso" class="hidden">
         <div style="font-size: 5rem; color: var(--success); margin-bottom: 10px;">✓</div>
         <h3 style="color: var(--success); margin: 0 0 10px 0;">Check-in Realizado!</h3>
@@ -67,31 +74,40 @@
     const auth = firebase.auth();
     const db = firebase.firestore();
 
-    const secaoCarregando = document.getElementById('secao-carregando');
+    const secaoLogin = document.getElementById('secao-login');
     const secaoOperacao = document.getElementById('secao-operacao');
     const secaoSucesso = document.getElementById('secao-sucesso');
+    const btnLogin = document.getElementById('btn-login');
     const btnCamera = document.getElementById('btn-abrir-camera');
     const readerDiv = document.getElementById('reader');
+    const userEmailSpan = document.getElementById('user-email');
     const placaInput = document.getElementById('placa');
-    const nomeInput = document.getElementById('nomeMotorista');
 
     let html5QrcodeScanner;
 
-    // AUTENTICAÇÃO ANÔNIMA AUTOMÁTICA (Ignora a tela travada do console)
-    auth.signInAnonymously()
-        .then(() => {
-            secaoCarregando.classList.add('hidden');
-            secaoOperacao.classList.remove('hidden');
-        })
-        .catch((error) => {
-            alert("Erro de conexão com o servidor: " + error.message);
+    btnLogin.addEventListener('click', () => {
+        const provider = new firebase.auth.GoogleAuthProvider();
+        auth.signInWithPopup(provider).then((result) => {
+            verificarStatusUsuario(result.user);
+        }).catch((error) => {
+            alert("Falha ao autenticar o dispositivo: " + error.message);
         });
+    });
+
+    auth.onAuthStateChanged((user) => {
+        if (user) verificarStatusUsuario(user);
+    });
+
+    function verificarStatusUsuario(user) {
+        userEmailSpan.innerText = user.displayName + " (" + user.email + ")";
+        secaoLogin.classList.add('hidden');
+        secaoOperacao.classList.remove('hidden');
+    }
 
     btnCamera.addEventListener('click', () => {
         const placa = placaInput.value.trim().toUpperCase();
-        const nome = nomeInput.value.trim().toUpperCase();
-        if(placa.length < 7 || nome.length < 3) {
-            alert("Por favor, preencha a placa e o seu nome antes de continuar.");
+        if(placa.length < 7) {
+            alert("Por favor, preencha a placa corretamente antes de continuar.");
             return;
         }
 
@@ -117,15 +133,16 @@
             html5QrcodeScanner.stop().then(() => {
                 db.collection("fila_patio").add({
                     placa: placaInput.value.trim().toUpperCase(),
-                    motorista: nomeInput.value.trim().toUpperCase(),
-                    email: "Acesso Portaria",
+                    motorista: auth.currentUser.displayName || "Motorista",
+                    email: auth.currentUser.email,
                     timestampChegada: Date.now(),
                     status: "Aguardando",
                     doca: "-",
                     conferente: "-"
                 })
                 .then(() => {
-                    securitizarTelaSucesso();
+                    secaoOperacao.classList.add('hidden');
+                    secaoSucesso.classList.remove('hidden');
                 })
                 .catch((error) => {
                     alert("Erro ao salvar dados no pátio: " + error.message);
@@ -134,11 +151,6 @@
         } else {
             alert("Código inválido! Escaneie o QR Code correto da portaria.");
         }
-    }
-
-    function securitizarTelaSucesso() {
-        secaoOperacao.classList.add('hidden');
-        secaoSucesso.classList.remove('hidden');
     }
 </script>
 </body>
