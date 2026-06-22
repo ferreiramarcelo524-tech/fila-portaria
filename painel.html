@@ -80,6 +80,7 @@
                     <th>Hora Saída</th>
                     <th>Status</th>
                     <th>Última Doca / Conf.</th>
+                    <th>Ações</th>
                 </tr>
             </thead>
             <tbody id="tabelaViagemCorpo"></tbody>
@@ -104,7 +105,6 @@
 
     let usuarioLogado = null;
 
-    // Monitora o estado de login do usuário
     auth.onAuthStateChanged((user) => {
         const userEmailTxt = document.getElementById('userEmail');
         const authBtn = document.getElementById('authBtn');
@@ -154,11 +154,11 @@
 
         snapshot.forEach((doc) => {
             const dados = { id: doc.id, ...doc.data() };
-            if (dados.status === 'Cancelado') return;
+            if (dados.status === 'Cancelado' || dados.status === 'Concluido') return;
             if(dados.status === 'Em Viagem') {
                 if (placasAtivas[dados.placa] && placasAtivas[dados.placa] > dados.timestampChegada) return; 
                 emViagem.push(dados);
-            } else if (dados.status !== 'Concluido') { 
+            } else { 
                 noPatio.push(dados);
             }
         });
@@ -202,6 +202,8 @@
             msgViagem.style.display = 'none';
             emViagem.forEach((v) => {
                 const tr = document.createElement('tr');
+                let btnConcluir = `<button class="btn-action btn-done" onclick="concluirViagem('${v.id}', '${v.placa}')">Concluir</button>`;
+                
                 tr.innerHTML = `
                     <td><strong style="color:var(--travel); font-size:1.1rem;">${v.placa}</strong></td>
                     <td><strong>${v.filial || '-'}</strong></td>
@@ -210,6 +212,7 @@
                     <td>${v.timestampSaida ? new Date(v.timestampSaida).toLocaleTimeString('pt-BR') : '-'}</td>
                     <td><span class="badge status-em-viagem">Em Viagem</span></td>
                     <td>Doca: ${v.doca} (${v.conferente})</td>
+                    <td>${btnConcluir}</td>
                 `;
                 tabelaViagem.appendChild(tr);
             });
@@ -257,6 +260,15 @@
         if (confirm(`Deseja realmente CANCELAR e remover o veículo com placa ${placa} da fila?`)) {
             db.collection("fila_patio").doc(id).update({ status: "Cancelado" })
             .catch(err => alert("Erro ao cancelar: Permissão Negada."));
+        }
+    };
+
+    // NOVA FUNÇÃO: CONCLUIR VIAGEM (TIRA DO HISTÓRICO DA TELA)
+    window.concluirViagem = (id, placa) => {
+        if(!usuarioLogado) { alert("Acesso negado! Faça o login de administrador primeiro."); return; }
+        if (confirm(`Deseja finalizar e concluir o processo da placa ${placa}?`)) {
+            db.collection("fila_patio").doc(id).update({ status: "Concluido" })
+            .catch(err => alert("Erro ao concluir: Permissão Negada."));
         }
     };
 
