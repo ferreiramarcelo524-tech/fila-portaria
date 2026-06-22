@@ -6,12 +6,15 @@
     <title>Painel União - Controle de Expedição</title>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
     <style>
         :root { --bg-primary: #f0f4f8; --surface: #ffffff; --text-main: #2c3e50; --primary: #0f52ba; --primary-hover: #0a3d8c; --success: #2ecc71; --travel: #e67e22; --warning: #f1c40f; --danger: #e74c3c; --border: #dcdde1; }
         body { font-family: 'Segoe UI', Arial, sans-serif; background-color: var(--bg-primary); color: var(--text-main); margin: 0; padding: 20px; }
         .container { max-width: 1400px; margin: 0 auto; }
         header { display: flex; justify-content: space-between; align-items: center; background: var(--primary); color: white; padding: 15px 30px; border-radius: 8px; margin-bottom: 25px; }
         header h1 { margin: 0; font-size: 1.6rem; }
+        .user-area { display: flex; align-items: center; gap: 15px; }
+        .btn-login { background-color: white; color: var(--primary); padding: 8px 15px; border-radius: 4px; border: none; font-weight: bold; cursor: pointer; }
         .card { background: var(--surface); padding: 20px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 25px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
         .card h2 { margin-top: 0; font-size: 1.15rem; border-bottom: 2px solid var(--bg-primary); padding-bottom: 12px; color: var(--primary); }
         .card.historico h2 { color: var(--travel); }
@@ -37,10 +40,13 @@
             <h1>Painel de Monitoramento de Expedição</h1>
             <p>Controle de Pátio CD-84 Marabá</p>
         </div>
-        <div id="relogio" style="font-size: 1.2rem; font-weight: bold;">00:00:00</div>
+        <div class="user-area">
+            <span id="userEmail" style="font-size: 0.9rem;">Visualização (Visitante)</span>
+            <button id="authBtn" class="btn-login" onclick="toggleAuth()">Login Admin</button>
+            <div id="relogio" style="font-size: 1.2rem; font-weight: bold; margin-left: 15px;">00:00:00</div>
+        </div>
     </header>
 
-    <!-- TABELA 1: FILA DE ESPERA E DOCA -->
     <section class="card">
         <h2>Fila de Espera / Operação Atual</h2>
         <table>
@@ -62,7 +68,6 @@
         <div id="msgPatioVazio" class="empty-msg">Nenhum veículo no pátio ou em doca.</div>
     </section>
 
-    <!-- TABELA 2: HISTÓRICO DE SAÍDAS (EM VIAGEM) -->
     <section class="card historico">
         <h2>Histórico de Saídas (Em Viagem)</h2>
         <table>
@@ -95,11 +100,44 @@
     
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
+    const auth = firebase.auth();
+
+    let usuarioLogado = null;
+
+    // Monitora o estado de login do usuário
+    auth.onAuthStateChanged((user) => {
+        const userEmailTxt = document.getElementById('userEmail');
+        const authBtn = document.getElementById('authBtn');
+        
+        if (user) {
+            usuarioLogado = user;
+            userEmailTxt.innerText = "Admin: " + user.email;
+            authBtn.innerText = "Sair";
+            authBtn.style.backgroundColor = "#e74c3c";
+            authBtn.style.color = "white";
+        } else {
+            usuarioLogado = null;
+            userEmailTxt.innerText = "Visualização (Visitante)";
+            authBtn.innerText = "Login Admin";
+            authBtn.style.backgroundColor = "white";
+            authBtn.style.color = "var(--primary)";
+        }
+    });
+
+    function toggleAuth() {
+        if (auth.currentUser) {
+            auth.signOut();
+        } else {
+            const provider = new firebase.auth.GoogleAuthProvider();
+            auth.signInWithPopup(provider).catch(err => {
+                alert("Erro ao fazer login: " + err.message);
+            });
+        }
+    }
 
     db.collection("fila_patio").onSnapshot((snapshot) => {
         const tabelaPatio = document.getElementById('tabelaPatioCorpo');
         const msgPatio = document.getElementById('msgPatioVazio');
-        
         const tabelaViagem = document.getElementById('tabelaViagemCorpo');
         const msgViagem = document.getElementById('msgViagemVazio');
         
@@ -116,13 +154,9 @@
 
         snapshot.forEach((doc) => {
             const dados = { id: doc.id, ...doc.data() };
-            
             if (dados.status === 'Cancelado') return;
-
             if(dados.status === 'Em Viagem') {
-                if (placasAtivas[dados.placa] && placasAtivas[dados.placa] > dados.timestampChegada) {
-                    return; 
-                }
+                if (placasAtivas[dados.placa] && placasAtivas[dados.placa] > dados.timestampChegada) return; 
                 emViagem.push(dados);
             } else if (dados.status !== 'Concluido') { 
                 noPatio.push(dados);
@@ -132,7 +166,6 @@
         noPatio.sort((a, b) => a.timestampChegada - b.timestampChegada);
         emViagem.sort((a, b) => b.timestampSaida - a.timestampSaida);
 
-        // --- RENDERIZAR TABELA 1 (PÁTIO / DOCA) ---
         tabelaPatio.innerHTML = '';
         if (noPatio.length === 0) {
             msgPatio.style.display = 'block';
@@ -140,28 +173,20 @@
             msgPatio.style.display = 'none';
             noPatio.forEach((v, idx) => {
                 const tr = document.createElement('tr');
-                
                 let btnAcao = v.status === 'Aguardando' ? 
                     `<button class="btn-action btn-call" onclick="chamar('${v.id}')">Chamar Doca</button>` :
                     `<button class="btn-action btn-done" onclick="liberar('${v.id}')">Liberar para Viagem</button>`;
                 
-                let btnEditar = '';
-                if (v.status !== 'Aguardando') {
-                    btnEditar = `<button class="btn-action btn-edit" onclick="editarRota('${v.id}', '${v.filial || ''}', '${v.doca || ''}', '${v.conferente || ''}')">Edit Rota</button>`;
-                }
-                
+                let btnEditar = v.status !== 'Aguardando' ? `<button class="btn-action btn-edit" onclick="editarRota('${v.id}', '${v.filial || ''}', '${v.doca || ''}', '${v.conferente || ''}')">Edit Rota</button>` : '';
                 let btnCancelar = `<button class="btn-action btn-cancel" onclick="cancelarChegada('${v.id}', '${v.placa}')">Cancelar</button>`;
-
-                const dataChegada = new Date(v.timestampChegada).toLocaleDateString('pt-BR');
-                const horaChegada = new Date(v.timestampChegada).toLocaleTimeString('pt-BR');
 
                 tr.innerHTML = `
                     <td><strong>${v.status === 'Aguardando' ? (idx + 1) + 'º' : '-'}</strong></td>
                     <td><strong style="color:var(--primary); font-size:1.1rem;">${v.placa}</strong></td>
                     <td><strong>${v.filial || '-'}</strong></td>
                     <td>${v.motorista}<br><small style="color:#7f8c8d">${v.email}</small></td>
-                    <td>${dataChegada}</td>
-                    <td>${horaChegada}</td>
+                    <td>${new Date(v.timestampChegada).toLocaleDateString('pt-BR')}</td>
+                    <td>${new Date(v.timestampChegada).toLocaleTimeString('pt-BR')}</td>
                     <td><span class="badge status-${v.status.toLowerCase().replace(/ /g, '-')}">${v.status}</span></td>
                     <td>${v.status === 'Em Doca' ? `Doca: ${v.doca} (${v.conferente})` : '-'}</td>
                     <td>${btnAcao}${btnEditar}${btnCancelar}</td>
@@ -170,7 +195,6 @@
             });
         }
 
-        // --- RENDERIZAR TABELA 2 (EM VIAGEM) ---
         tabelaViagem.innerHTML = '';
         if (emViagem.length === 0) {
             msgViagem.style.display = 'block';
@@ -178,15 +202,12 @@
             msgViagem.style.display = 'none';
             emViagem.forEach((v) => {
                 const tr = document.createElement('tr');
-                const dataSaida = v.timestampSaida ? new Date(v.timestampSaida).toLocaleDateString('pt-BR') : '-';
-                const horaSaida = v.timestampSaida ? new Date(v.timestampSaida).toLocaleTimeString('pt-BR') : '-';
-                
                 tr.innerHTML = `
                     <td><strong style="color:var(--travel); font-size:1.1rem;">${v.placa}</strong></td>
                     <td><strong>${v.filial || '-'}</strong></td>
                     <td>${v.motorista}<br><small style="color:#7f8c8d">${v.email}</small></td>
-                    <td>${dataSaida}</td>
-                    <td>${horaSaida}</td>
+                    <td>${v.timestampSaida ? new Date(v.timestampSaida).toLocaleDateString('pt-BR') : '-'}</td>
+                    <td>${v.timestampSaida ? new Date(v.timestampSaida).toLocaleTimeString('pt-BR') : '-'}</td>
                     <td><span class="badge status-em-viagem">Em Viagem</span></td>
                     <td>Doca: ${v.doca} (${v.conferente})</td>
                 `;
@@ -196,29 +217,26 @@
     });
 
     window.chamar = (id) => {
+        if(!usuarioLogado) { alert("Acesso negado! Faça o login de administrador primeiro."); return; }
         const f = prompt("Para qual Filial o veículo vai?");
         const d = prompt("Número da Doca:");
         const c = prompt("Nome do Conferente:");
         if (f && d && c) {
-            db.collection("fila_patio").doc(id).update({ 
-                status: "Em Doca", 
-                filial: f,
-                doca: d, 
-                conferente: c 
-            });
+            db.collection("fila_patio").doc(id).update({ status: "Em Doca", filial: f, doca: d, conferente: c })
+            .catch(err => alert("Erro ao salvar: Permissão Negada."));
         }
     };
 
     window.liberar = (id) => {
+        if(!usuarioLogado) { alert("Acesso negado! Faça o login de administrador primeiro."); return; }
         if (confirm("Confirmar liberação do veículo para viagem?")) {
-            db.collection("fila_patio").doc(id).update({ 
-                status: "Em Viagem",
-                timestampSaida: Date.now()
-            });
+            db.collection("fila_patio").doc(id).update({ status: "Em Viagem", timestampSaida: Date.now() })
+            .catch(err => alert("Erro ao salvar: Permissão Negada."));
         }
     };
 
     window.editarRota = (id, filialAtual, docaAtual, conferenteAtual) => {
+        if(!usuarioLogado) { alert("Acesso negado! Faça o login de administrador primeiro."); return; }
         const novaFilial = prompt("Editar Filial Destino:", filialAtual);
         const novaDoca = prompt("Editar Número da Doca:", docaAtual);
         const novoConferente = prompt("Editar Nome do Conferente:", conferenteAtual);
@@ -230,17 +248,15 @@
             if (novoConferente !== null) dadosUpdated.conferente = novoConferente.trim();
 
             db.collection("fila_patio").doc(id).update(dadosUpdated)
-            .catch(err => alert("Erro ao atualizar dados: " + err.message));
+            .catch(err => alert("Erro ao atualizar dados: Permissão Negada."));
         }
     };
 
     window.cancelarChegada = (id, placa) => {
+        if(!usuarioLogado) { alert("Acesso negado! Faça o login de administrador primeiro."); return; }
         if (confirm(`Deseja realmente CANCELAR e remover o veículo com placa ${placa} da fila?`)) {
-            db.collection("fila_patio").doc(id).update({
-                status: "Cancelado"
-            }).catch(err => {
-                alert("Erro ao tentar cancelar: " + err.message);
-            });
+            db.collection("fila_patio").doc(id).update({ status: "Cancelado" })
+            .catch(err => alert("Erro ao cancelar: Permissão Negada."));
         }
     };
 
