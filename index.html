@@ -83,7 +83,7 @@
     const userEmailSpan = document.getElementById('user-email');
     const placaInput = document.getElementById('placa');
 
-    let html5QrcodeScanner;
+    let html5QrCode;
 
     btnLogin.addEventListener('click', () => {
         const provider = new firebase.auth.GoogleAuthProvider();
@@ -111,17 +111,31 @@
             return;
         }
 
-        // Mostra o quadrado preto da câmera e esconde o botão
         btnCamera.classList.add('hidden');
         readerDiv.classList.remove('hidden');
 
-        html5QrcodeScanner = new Html5Qrcode("reader");
-        html5QrcodeScanner.start(
+        // Nova inicialização corrigida focando na câmera traseira
+        html5QrCode = new Html5Qrcode("reader");
+        html5QrCode.start(
             { facingMode: "environment" }, 
-            { fps: 10, qrbox: { width: 250, height: 250 } },
-            processarLeituraQRCode
+            { 
+                fps: 15, 
+                qrbox: { width: 250, height: 250 },
+                aspectRatio: 1.0
+            },
+            (decodedText) => {
+                // Quando ler com sucesso, para a câmera e processa o texto lido
+                html5QrCode.stop().then(() => {
+                    processarLeituraQRCode(decodedText);
+                }).catch(err => {
+                    processarLeituraQRCode(decodedText); 
+                });
+            },
+            (errorMessage) => {
+                // Monitoramento em segundo plano (ignora logs repetitivos)
+            }
         ).catch(err => {
-            alert("Erro ao abrir a câmera: " + err);
+            alert("Erro ao abrir a câmera: Verifique se deu permissão de uso no navegador!\nDetalhe: " + err);
             btnCamera.classList.remove('hidden');
             readerDiv.classList.add('hidden');
         });
@@ -129,40 +143,32 @@
 
     function processarLeituraQRCode(textoEscaneado) {
         const PALAVRA_CHAVE_OFICIAL = "PORTARIA_CD84_VALIDADO"; 
-        
-        // Remove espaços extras para evitar erros de leitura
         const textoLimpo = textoEscaneado.trim();
 
         if (textoLimpo === PALAVRA_CHAVE_OFICIAL) {
-            // Para a câmera antes de tentar gravar no banco
-            html5QrcodeScanner.stop().then(() => {
-                
-                db.collection("fila_patio").add({
-                    placa: placaInput.value.trim().toUpperCase(),
-                    motorista: auth.currentUser.displayName || "Motorista",
-                    email: auth.currentUser.email,
-                    timestampChegada: Date.now(),
-                    status: "Aguardando",
-                    doca: "-",
-                    conferente: "-"
-                })
-                .then(() => {
-                    // Se gravou com sucesso, esconde tudo e mostra o check verde
-                    secaoOperacao.classList.add('hidden');
-                    secaoSucesso.classList.remove('hidden');
-                })
-                .catch((error) => {
-                    // Alerta caso as regras do Firestore estejam bloqueando a gravação
-                    alert("Erro do Banco Firebase ao salvar dados: " + error.message + "\n Verifique se o Cloud Firestore está ativo no modo de teste!");
-                    btnCamera.classList.remove('hidden');
-                    readerDiv.classList.add('hidden');
-                });
-
-            }).catch(err => {
-                alert("Erro ao finalizar a câmera: " + err);
+            db.collection("fila_patio").add({
+                placa: placaInput.value.trim().toUpperCase(),
+                motorista: auth.currentUser.displayName || "Motorista",
+                email: auth.currentUser.email,
+                timestampChegada: Date.now(),
+                status: "Aguardando",
+                doca: "-",
+                conferente: "-"
+            })
+            .then(() => {
+                secaoOperacao.classList.add('hidden');
+                secaoSucesso.classList.remove('hidden');
+            })
+            .catch((error) => {
+                alert("Erro do Banco Firebase ao salvar dados: " + error.message + "\n\nVerifique se o Cloud Firestore está ativo no modo de teste!");
+                btnCamera.classList.remove('hidden');
+                readerDiv.classList.add('hidden');
             });
         } else {
             alert("Código Lido Inválido!\n\nVocê leu: '" + textoLimpo + "'\n\nO aplicativo espera exatamente: PORTARIA_CD84_VALIDADO");
+            // Se o código for inválido, reativa a possibilidade de tentar abrir a câmera de novo
+            btnCamera.classList.remove('hidden');
+            readerDiv.classList.add('hidden');
         }
     }
 </script>
