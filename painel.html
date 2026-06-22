@@ -45,6 +45,7 @@
                 <tr>
                     <th>Pos.</th>
                     <th>Placa</th>
+                    <th>Filial Destino</th>
                     <th>Motorista / E-mail</th>
                     <th>Chegada</th>
                     <th>Status</th>
@@ -63,6 +64,7 @@
             <thead>
                 <tr>
                     <th>Placa</th>
+                    <th>Filial Destino</th>
                     <th>Motorista / E-mail</th>
                     <th>Horário Saída</th>
                     <th>Status</th>
@@ -88,7 +90,7 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
-    // Atualiza as tabelas em tempo real
+    // Monitoramento em tempo real do banco de dados
     db.collection("fila_patio").onSnapshot((snapshot) => {
         const tabelaPatio = document.getElementById('tabelaPatioCorpo');
         const msgPatio = document.getElementById('msgPatioVazio');
@@ -99,19 +101,35 @@
         let noPatio = [];
         let emViagem = [];
         
+        // Mapeia todos os registros e verifica duplicatas de placas antigas de viagens anteriores
+        let placasAtivas = {};
+
+        // Primeiro passo: Identifica quem está no pátio agora para evitar que registros antigos de viagem poluam a tela
         snapshot.forEach((doc) => {
             const dados = { id: doc.id, ...doc.data() };
+            if (dados.status !== 'Em Viagem' && dados.status !== 'Concluido') {
+                placasAtivas[dados.placa] = dados.timestampChegada;
+            }
+        });
+
+        snapshot.forEach((doc) => {
+            const dados = { id: doc.id, ...doc.data() };
+            
             if(dados.status === 'Em Viagem') {
+                // Se essa placa fez um check-in mais recente no pátio, ignora o histórico antigo de viagem
+                if (placasAtivas[dados.placa] && placasAtivas[dados.placa] > dados.timestampChegada) {
+                    return; 
+                }
                 emViagem.push(dados);
             } else if (dados.status !== 'Concluido') { 
                 noPatio.push(dados);
             }
         });
 
-        // Ordena fila do pátio por quem chegou primeiro
+        // Ordena fila do pátio por ordem de chegada (mais antigo primeiro)
         noPatio.sort((a, b) => a.timestampChegada - b.timestampChegada);
         
-        // Ordena histórico de viagem por quem saiu por último (mais recentes no topo)
+        // Ordena histórico de viagem por quem saiu por último
         emViagem.sort((a, b) => b.timestampSaida - a.timestampSaida);
 
         // --- RENDERIZAR TABELA 1 (PÁTIO / DOCA) ---
@@ -129,6 +147,7 @@
                 tr.innerHTML = `
                     <td><strong>${v.status === 'Aguardando' ? (idx + 1) + 'º' : '-'}</strong></td>
                     <td><strong style="color:var(--primary); font-size:1.1rem;">${v.placa}</strong></td>
+                    <td><strong>${v.filial || '-'}</strong></td>
                     <td>${v.motorista}<br><small style="color:#7f8c8d">${v.email}</small></td>
                     <td>${new Date(v.timestampChegada).toLocaleTimeString('pt-BR')}</td>
                     <td><span class="badge status-${v.status.toLowerCase().replace(/ /g, '-')}">${v.status}</span></td>
@@ -151,6 +170,7 @@
                 
                 tr.innerHTML = `
                     <td><strong style="color:var(--travel); font-size:1.1rem;">${v.placa}</strong></td>
+                    <td><strong>${v.filial || '-'}</strong></td>
                     <td>${v.motorista}<br><small style="color:#7f8c8d">${v.email}</small></td>
                     <td>${horaSaida}</td>
                     <td><span class="badge status-em-viagem">Em Viagem</span></td>
@@ -162,11 +182,13 @@
     });
 
     window.chamar = (id) => {
+        const f = prompt("Para qual Filial o veículo vai?");
         const d = prompt("Número da Doca:");
         const c = prompt("Nome do Conferente:");
-        if (d && c) {
+        if (f && d && c) {
             db.collection("fila_patio").doc(id).update({ 
                 status: "Em Doca", 
+                filial: f,
                 doca: d, 
                 conferente: c 
             });
@@ -177,7 +199,7 @@
         if (confirm("Confirmar liberação do veículo para viagem?")) {
             db.collection("fila_patio").doc(id).update({ 
                 status: "Em Viagem",
-                timestampSaida: Date.now() // Grava o momento exato da saída
+                timestampSaida: Date.now()
             });
         }
     };
