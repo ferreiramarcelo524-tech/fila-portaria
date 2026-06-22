@@ -17,7 +17,7 @@
         .hidden { display: none !important; }
         button { width: 100%; padding: 14px; background-color: var(--primary); color: white; border: none; border-radius: 6px; font-size: 1rem; font-weight: bold; cursor: pointer; margin-top: 15px; }
         input { width: 100%; padding: 14px; margin: 10px 0 20px 0; border: 2px solid #dcdde1; border-radius: 6px; box-sizing: border-box; font-size: 1.2rem; text-align: center; font-weight: bold; text-transform: uppercase; }
-        #reader { width: 100%; background: #000; border-radius: 8px; overflow: hidden; margin-top: 15px; }
+        #reader { width: 100%; background: #000; border-radius: 8px; overflow: hidden; margin-top: 15px; min-height: 250px; }
         .user-info { background: #e8f0fe; padding: 12px; border-radius: 6px; font-size: 0.9rem; margin-bottom: 20px; border: 1px solid #d2e3fc; text-align: left; }
     </style>
 </head>
@@ -28,13 +28,13 @@
     <p>Validação Antifraude de Entrada</p>
     <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
 
-    <!-- ETAPA 1: LOGIN PELO EMAIL -->
+    <!-- ETAPA 1: LOGIN -->
     <div id="secao-login">
         <p>Para iniciar o seu registro, valide a sua identidade usando a conta de e-mail do seu aparelho celular.</p>
         <button id="btn-login">Entrar com Conta Google</button>
     </div>
 
-    <!-- ETAPA 2: FORMULÁRIO E LEITURA DO QR CODE -->
+    <!-- ETAPA 2: OPERAÇÃO -->
     <div id="secao-operacao" class="hidden">
         <div class="user-info">
             Identificado como:<br>
@@ -52,7 +52,7 @@
         <div id="reader" class="hidden"></div>
     </div>
 
-    <!-- SUCESSO -->
+    <!-- ETAPA 3: SUCESSO -->
     <div id="secao-sucesso" class="hidden">
         <div style="font-size: 5rem; color: var(--success); margin-bottom: 10px;">✓</div>
         <h3 style="color: var(--success); margin: 0 0 10px 0;">Check-in Realizado!</h3>
@@ -90,7 +90,7 @@
         auth.signInWithPopup(provider).then((result) => {
             verificarStatusUsuario(result.user);
         }).catch((error) => {
-            alert("Falha ao autenticar o dispositivo: " + error.message);
+            alert("Falha ao autenticar: " + error.message);
         });
     });
 
@@ -111,6 +111,7 @@
             return;
         }
 
+        // Mostra o quadrado preto da câmera e esconde o botão
         btnCamera.classList.add('hidden');
         readerDiv.classList.remove('hidden');
 
@@ -120,7 +121,7 @@
             { fps: 10, qrbox: { width: 250, height: 250 } },
             processarLeituraQRCode
         ).catch(err => {
-            alert("Erro ao ativar câmera: " + err);
+            alert("Erro ao abrir a câmera: " + err);
             btnCamera.classList.remove('hidden');
             readerDiv.classList.add('hidden');
         });
@@ -128,9 +129,14 @@
 
     function processarLeituraQRCode(textoEscaneado) {
         const PALAVRA_CHAVE_OFICIAL = "PORTARIA_CD84_VALIDADO"; 
+        
+        // Remove espaços extras para evitar erros de leitura
+        const textoLimpo = textoEscaneado.trim();
 
-        if (textoEscaneado.trim() === PALAVRA_CHAVE_OFICIAL) {
+        if (textoLimpo === PALAVRA_CHAVE_OFICIAL) {
+            // Para a câmera antes de tentar gravar no banco
             html5QrcodeScanner.stop().then(() => {
+                
                 db.collection("fila_patio").add({
                     placa: placaInput.value.trim().toUpperCase(),
                     motorista: auth.currentUser.displayName || "Motorista",
@@ -141,15 +147,22 @@
                     conferente: "-"
                 })
                 .then(() => {
+                    // Se gravou com sucesso, esconde tudo e mostra o check verde
                     secaoOperacao.classList.add('hidden');
                     secaoSucesso.classList.remove('hidden');
                 })
                 .catch((error) => {
-                    alert("Erro ao salvar dados no pátio: " + error.message);
+                    // Alerta caso as regras do Firestore estejam bloqueando a gravação
+                    alert("Erro do Banco Firebase ao salvar dados: " + error.message + "\n Verifique se o Cloud Firestore está ativo no modo de teste!");
+                    btnCamera.classList.remove('hidden');
+                    readerDiv.classList.add('hidden');
                 });
+
+            }).catch(err => {
+                alert("Erro ao finalizar a câmera: " + err);
             });
         } else {
-            alert("Código inválido! Escaneie o QR Code correto da portaria.");
+            alert("Código Lido Inválido!\n\nVocê leu: '" + textoLimpo + "'\n\nO aplicativo espera exatamente: PORTARIA_CD84_VALIDADO");
         }
     }
 </script>
