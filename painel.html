@@ -7,13 +7,14 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
     <style>
-        :root { --bg-primary: #f0f4f8; --surface: #ffffff; --text-main: #2c3e50; --primary: #0f52ba; --primary-hover: #0a3d8c; --success: #2ecc71; --border: #dcdde1; }
+        :root { --bg-primary: #f0f4f8; --surface: #ffffff; --text-main: #2c3e50; --primary: #0f52ba; --primary-hover: #0a3d8c; --success: #2ecc71; --travel: #e67e22; --border: #dcdde1; }
         body { font-family: 'Segoe UI', Arial, sans-serif; background-color: var(--bg-primary); color: var(--text-main); margin: 0; padding: 20px; }
         .container { max-width: 1400px; margin: 0 auto; }
         header { display: flex; justify-content: space-between; align-items: center; background: var(--primary); color: white; padding: 15px 30px; border-radius: 8px; margin-bottom: 25px; }
         header h1 { margin: 0; font-size: 1.6rem; }
-        .card { background: var(--surface); padding: 20px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 25px; }
+        .card { background: var(--surface); padding: 20px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 25px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
         .card h2 { margin-top: 0; font-size: 1.15rem; border-bottom: 2px solid var(--bg-primary); padding-bottom: 12px; color: var(--primary); }
+        .card.historico h2 { color: var(--travel); }
         .btn-action { padding: 6px 12px; font-size: 0.85rem; border-radius: 4px; border: none; cursor: pointer; color: white; font-weight: 600; }
         .btn-call { background-color: var(--primary); }
         .btn-done { background-color: var(--success); }
@@ -23,6 +24,7 @@
         .badge { display: inline-block; padding: 5px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: bold; }
         .status-aguardando { background-color: #ffeaa7; color: #b33939; }
         .status-em-doca { background-color: #74b9ff; color: #0984e3; }
+        .status-em-viagem { background-color: #ffe8d6; color: var(--travel); }
         .empty-msg { text-align: center; color: #95a5a6; padding: 20px; font-style: italic; }
     </style>
 </head>
@@ -37,7 +39,7 @@
     </header>
 
     <section class="card">
-        <h2>Fila de Espera Atual</h2>
+        <h2>Fila de Espera / Operação Atual</h2>
         <table>
             <thead>
                 <tr>
@@ -52,7 +54,24 @@
             </thead>
             <tbody id="tabelaPatioCorpo"></tbody>
         </table>
-        <div id="msgPatioVazio" class="empty-msg">Nenhum veículo no pátio. Aguardando leituras...</div>
+        <div id="msgPatioVazio" class="empty-msg">Nenhum veículo no pátio ou em doca.</div>
+    </section>
+
+    <section class="card historico">
+        <h2>Histórico de Saídas (Em Viagem)</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Placa</th>
+                    <th>Motorista / E-mail</th>
+                    <th>Horário Saída</th>
+                    <th>Status</th>
+                    <th>Última Doca / Conf.</th>
+                </tr>
+            </thead>
+            <tbody id="tabelaViagemCorpo"></tbody>
+        </table>
+        <div id="msgViagemVazio" class="empty-msg">Nenhum veículo saiu em viagem hoje.</div>
     </section>
 </div>
 
@@ -69,29 +88,43 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
+    // Atualiza as tabelas em tempo real
     db.collection("fila_patio").onSnapshot((snapshot) => {
-        const tabela = document.getElementById('tabelaPatioCorpo');
-        const msg = document.getElementById('msgPatioVazio');
-        let ativos = [];
+        const tabelaPatio = document.getElementById('tabelaPatioCorpo');
+        const msgPatio = document.getElementById('msgPatioVazio');
+        
+        const tabelaViagem = document.getElementById('tabelaViagemCorpo');
+        const msgViagem = document.getElementById('msgViagemVazio');
+        
+        let noPatio = [];
+        let emViagem = [];
         
         snapshot.forEach((doc) => {
-            if(doc.data().status !== 'Concluido') {
-                ativos.push({ id: doc.id, ...doc.data() });
+            const dados = { id: doc.id, ...doc.data() };
+            if(dados.status === 'Em Viagem') {
+                emViagem.push(dados);
+            } else if (dados.status !== 'Concluido') { 
+                noPatio.push(dados);
             }
         });
 
-        ativos.sort((a, b) => a.timestampChegada - b.timestampChegada);
+        // Ordena fila do pátio por quem chegou primeiro
+        noPatio.sort((a, b) => a.timestampChegada - b.timestampChegada);
+        
+        // Ordena histórico de viagem por quem saiu por último (mais recentes no topo)
+        emViagem.sort((a, b) => b.timestampSaida - a.timestampSaida);
 
-        tabela.innerHTML = '';
-        if (ativos.length === 0) {
-            msg.style.display = 'block';
+        // --- RENDERIZAR TABELA 1 (PÁTIO / DOCA) ---
+        tabelaPatio.innerHTML = '';
+        if (noPatio.length === 0) {
+            msgPatio.style.display = 'block';
         } else {
-            msg.style.display = 'none';
-            ativos.forEach((v, idx) => {
+            msgPatio.style.display = 'none';
+            noPatio.forEach((v, idx) => {
                 const tr = document.createElement('tr');
                 let btn = v.status === 'Aguardando' ? 
                     `<button class="btn-action btn-call" onclick="chamar('${v.id}')">Chamar Doca</button>` :
-                    `<button class="btn-action btn-done" onclick="liberar('${v.id}')">Liberar</button>`;
+                    `<button class="btn-action btn-done" onclick="liberar('${v.id}')">Liberar para Viagem</button>`;
 
                 tr.innerHTML = `
                     <td><strong>${v.status === 'Aguardando' ? (idx + 1) + 'º' : '-'}</strong></td>
@@ -102,7 +135,28 @@
                     <td>${v.status === 'Em Doca' ? `Doca: ${v.doca} (${v.conferente})` : '-'}</td>
                     <td>${btn}</td>
                 `;
-                tabela.appendChild(tr);
+                tabelaPatio.appendChild(tr);
+            });
+        }
+
+        // --- RENDERIZAR TABELA 2 (EM VIAGEM) ---
+        tabelaViagem.innerHTML = '';
+        if (emViagem.length === 0) {
+            msgViagem.style.display = 'block';
+        } else {
+            msgViagem.style.display = 'none';
+            emViagem.forEach((v) => {
+                const tr = document.createElement('tr');
+                const horaSaida = v.timestampSaida ? new Date(v.timestampSaida).toLocaleTimeString('pt-BR') : '-';
+                
+                tr.innerHTML = `
+                    <td><strong style="color:var(--travel); font-size:1.1rem;">${v.placa}</strong></td>
+                    <td>${v.motorista}<br><small style="color:#7f8c8d">${v.email}</small></td>
+                    <td>${horaSaida}</td>
+                    <td><span class="badge status-em-viagem">Em Viagem</span></td>
+                    <td>Doca: ${v.doca} (${v.conferente})</td>
+                `;
+                tabelaViagem.appendChild(tr);
             });
         }
     });
@@ -110,11 +164,22 @@
     window.chamar = (id) => {
         const d = prompt("Número da Doca:");
         const c = prompt("Nome do Conferente:");
-        if (d && c) db.collection("fila_patio").doc(id).update({ status: "Em Doca", doca: d, conferente: c });
+        if (d && c) {
+            db.collection("fila_patio").doc(id).update({ 
+                status: "Em Doca", 
+                doca: d, 
+                conferente: c 
+            });
+        }
     };
 
     window.liberar = (id) => {
-        if (confirm("Confirmar liberação do veículo?")) db.collection("fila_patio").doc(id).update({ status: "Concluido" });
+        if (confirm("Confirmar liberação do veículo para viagem?")) {
+            db.collection("fila_patio").doc(id).update({ 
+                status: "Em Viagem",
+                timestampSaida: Date.now() // Grava o momento exato da saída
+            });
+        }
     };
 
     setInterval(() => { document.getElementById('relogio').innerText = new Date().toLocaleTimeString('pt-BR'); }, 1000);
