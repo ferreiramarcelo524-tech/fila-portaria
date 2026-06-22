@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Check-in Motorista - Portaria</title>
+    
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    
+    <script src="https://unpkg.com/html5-qrcode"></script>
+
+    <style>
+        :root {
+            --primary: #0f52ba;
+            --success: #2ecc71;
+            --bg: #f5f6fa;
+            --text: #2c3e50;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg);
+            margin: 0;
+            padding: 20px;
+            color: var(--text);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 90vh;
+        }
+        .container {
+            width: 100%;
+            max-width: 450px;
+            background: white;
+            padding: 30px 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            box-sizing: border-box;
+        }
+        h2 { margin: 0 0 5px 0; color: var(--primary); }
+        p { color: #7f8c8d; font-size: 0.95rem; line-height: 1.4; }
+        .hidden { display: none !important; }
+        
+        button {
+            width: 100%;
+            padding: 14px;
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 15px;
+            transition: background 0.2s;
+        }
+        button:hover { background-color: #0a3d8c; }
+        
+        input {
+            width: 100%;
+            padding: 14px;
+            margin: 10px 0 20px 0;
+            border: 2px solid #dcdde1;
+            border-radius: 6px;
+            box-sizing: border-box;
+            font-size: 1.2rem;
+            text-align: center;
+            font-weight: bold;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+        input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+        
+        #reader {
+            width: 100%;
+            background: #000;
+            border-radius: 8px;
+            overflow: hidden;
+            margin-top: 15px;
+        }
+        .user-info {
+            background: #e8f0fe;
+            padding: 12px;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            margin-bottom: 20px;
+            border: 1px solid #d2e3fc;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Check-in Eletrônico</h2>
+    <p>Validação Antifraude de Entrada</p>
+    <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
+
+    <div id="secao-login">
+        <p>Para iniciar o seu registro, valide a sua identidade usando a conta de e-mail do seu aparelho celular.</p>
+        <button id="btn-login">Entrar com Conta Google</button>
+    </div>
+
+    <div id="secao-operacao" class="hidden">
+        <div class="user-info">
+            Identificado como:<br>
+            <strong id="user-email">Carregando...</strong>
+        </div>
+
+        <div id="bloco-formulario">
+            <label for="placa" style="display:block; text-align:left; font-weight:bold; font-size: 0.9rem;">DIGITE A PLACA DO VEÍCULO:</label>
+            <input type="text" id="placa" placeholder="ABC1D23" maxlength="8">
+            
+            <p style="text-align: left; font-size: 0.9rem;">⚠️ <strong>Passo Final:</strong> Após digitar a placa corretamente, clique no botão abaixo para abrir a câmera e escanear o QR Code físico da portaria.</p>
+            <button id="btn-abrir-camera">Abrir Câmera e Confirmar Presença</button>
+        </div>
+
+        <div id="reader" class="hidden"></div>
+    </div>
+
+    <div id="secao-sucesso" class="hidden">
+        <div style="font-size: 5rem; color: var(--success); margin-bottom: 10px;">✓</div>
+        <h3 style="color: var(--success); margin: 0 0 10px 0;">Check-in Realizado com Sucesso!</h3>
+        <p>Sua chegada foi gravada na fila. Pode desligar o celular e aguardar o chamado do painel da expedição no pátio.</p>
+    </div>
+</div>
+
+<script>
+    // --- SUA CONFIGURAÇÃO DO FIREBASE UNIFICADA ---
+    const firebaseConfig = {
+        apiKey: "AIzaSyCDv9K7VtXwe81eAzQteQb83IYkebPasgE",
+        authDomain: "expedicao-antifraud.firebaseapp.com",
+        projectId: "expedicao-antifraud",
+        storageBucket: "expedicao-antifraud.firebasestorage.app",
+        messagingSenderId: "683256630906",
+        appId: "1:683256630906:web:688866abf7f2d00e6eb5c3"
+    };
+    
+    // Inicialização dos serviços
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+
+    // Elementos da Interface
+    const secaoLogin = document.getElementById('secao-login');
+    const secaoOperacao = document.getElementById('secao-operacao');
+    const secaoSucesso = document.getElementById('secao-sucesso');
+    const btnLogin = document.getElementById('btn-login');
+    const btnCamera = document.getElementById('btn-abrir-camera');
+    const readerDiv = document.getElementById('reader');
+    const userEmailSpan = document.getElementById('user-email');
+    const placaInput = document.getElementById('placa');
+
+    let html5QrcodeScanner;
+    let emailMotoristaLogado = "";
+
+    // 1. Comando de Login com o Provedor Google
+    btnLogin.addEventListener('click', () => {
+        const provider = new firebase.auth.GoogleAuthProvider();
+        auth.signInWithPopup(provider).then((result) => {
+            verificarStatusUsuario(result.user);
+        }).catch((error) => {
+            alert("Falha ao autenticar o dispositivo: " + error.message);
+        });
+    });
+
+    // Monitora o estado de login do navegador
+    auth.onAuthStateChanged((user) => {
+        if (user) verificarStatusUsuario(user);
+    });
+
+    function verificarStatusUsuario(user) {
+        emailMotoristaLogado = user.email;
+        userEmailSpan.innerText = user.displayName + " (" + user.email + ")";
+        secaoLogin.classList.add('hidden');
+        secaoOperacao.classList.remove('hidden');
+    }
+
+    // 2. Acionamento da Câmera do Celular
+    btnCamera.addEventListener('click', () => {
+        const placa = placaInput.value.trim().toUpperCase();
+        if(placa.length < 7) {
+            alert("Por favor, preencha a placa do veículo antes de ler o QR Code.");
+            return;
+        }
+
+        btnCamera.classList.add('hidden');
+        readerDiv.classList.remove('hidden');
+
+        // Instancia o leitor forçando o uso da câmera traseira do celular
+        html5QrcodeScanner = new Html5Qrcode("reader");
+        html5QrcodeScanner.start(
+            { facingMode: "environment" }, 
+            { fps: 10, qrbox: { width: 250, height: 250 } },
+            processarLeituraQRCode
+        ).catch(err => {
+            alert("Permissão de câmera negada ou erro ao iniciar: " + err);
+            btnCamera.classList.remove('hidden');
+            readerDiv.classList.add('hidden');
+        });
+    });
+
+    // 3. Processamento Antifraude do QR Code impresso
+    function processarLeituraQRCode(textoEscaneado, resultadoObj) {
+        // Palavra-chave obrigatória do QR Code físico colado na portaria
+        const PALAVRA_CHAVE_OFICIAL = "PORTARIA_CD84_VALIDADO"; 
+
+        if (textoEscaneado.trim() === PALAVRA_CHAVE_OFICIAL) {
+            // Desliga a câmera imediatamente para economizar processamento
+            html5QrcodeScanner.stop().then(() => {
+                
+                // Grava o registro diretamente na nuvem do Firestore
+                db.collection("fila_patio").add({
+                    placa: placaInput.value.trim().toUpperCase(),
+                    motorista: auth.currentUser.displayName || "Motorista",
+                    email: emailMotoristaLogado,
+                    timestampChegada: Date.now(),
+                    status: "Aguardando",
+                    doca: "-",
+                    conferente: "-"
+                })
+                .then(() => {
+                    // Direciona para a tela de Sucesso final
+                    secaoOperacao.classList.add('hidden');
+                    secaoSucesso.classList.remove('hidden');
+                })
+                .catch((error) => {
+                    alert("Erro crítico de persistência na nuvem: " + error.message);
+                });
+
+            });
+        } else {
+            alert("Código Inválido! Certifique-se de estar escaneando o QR Code físico oficial localizado na portaria de triagem.");
+        }
+    }
+</script>
+
+</body>
+</html>
