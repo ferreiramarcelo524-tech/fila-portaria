@@ -50,7 +50,8 @@
                     <th>Placa</th>
                     <th>Filial Destino</th>
                     <th>Motorista / E-mail</th>
-                    <th>Chegada</th>
+                    <th>Data Chegada</th>
+                    <th>Hora Chegada</th>
                     <th>Status</th>
                     <th>Doca / Conferente</th>
                     <th>Ações</th>
@@ -70,7 +71,8 @@
                     <th>Placa</th>
                     <th>Filial Destino</th>
                     <th>Motorista / E-mail</th>
-                    <th>Horário Saída</th>
+                    <th>Data Saída</th>
+                    <th>Hora Saída</th>
                     <th>Status</th>
                     <th>Última Doca / Conf.</th>
                 </tr>
@@ -143,7 +145,6 @@
                     `<button class="btn-action btn-call" onclick="chamar('${v.id}')">Chamar Doca</button>` :
                     `<button class="btn-action btn-done" onclick="liberar('${v.id}')">Liberar para Viagem</button>`;
                 
-                // O botão de edição só é criado se o veículo já tiver dados de rota (status diferente de Aguardando)
                 let btnEditar = '';
                 if (v.status !== 'Aguardando') {
                     btnEditar = `<button class="btn-action btn-edit" onclick="editarRota('${v.id}', '${v.filial || ''}', '${v.doca || ''}', '${v.conferente || ''}')">Edit Rota</button>`;
@@ -151,12 +152,16 @@
                 
                 let btnCancelar = `<button class="btn-action btn-cancel" onclick="cancelarChegada('${v.id}', '${v.placa}')">Cancelar</button>`;
 
+                const dataChegada = new Date(v.timestampChegada).toLocaleDateString('pt-BR');
+                const horaChegada = new Date(v.timestampChegada).toLocaleTimeString('pt-BR');
+
                 tr.innerHTML = `
                     <td><strong>${v.status === 'Aguardando' ? (idx + 1) + 'º' : '-'}</strong></td>
                     <td><strong style="color:var(--primary); font-size:1.1rem;">${v.placa}</strong></td>
                     <td><strong>${v.filial || '-'}</strong></td>
                     <td>${v.motorista}<br><small style="color:#7f8c8d">${v.email}</small></td>
-                    <td>${new Date(v.timestampChegada).toLocaleTimeString('pt-BR')}</td>
+                    <td>${dataChegada}</td>
+                    <td>${horaChegada}</td>
                     <td><span class="badge status-${v.status.toLowerCase().replace(/ /g, '-')}">${v.status}</span></td>
                     <td>${v.status === 'Em Doca' ? `Doca: ${v.doca} (${v.conferente})` : '-'}</td>
                     <td>${btnAcao}${btnEditar}${btnCancelar}</td>
@@ -173,12 +178,14 @@
             msgViagem.style.display = 'none';
             emViagem.forEach((v) => {
                 const tr = document.createElement('tr');
+                const dataSaida = v.timestampSaida ? new Date(v.timestampSaida).toLocaleDateString('pt-BR') : '-';
                 const horaSaida = v.timestampSaida ? new Date(v.timestampSaida).toLocaleTimeString('pt-BR') : '-';
                 
                 tr.innerHTML = `
                     <td><strong style="color:var(--travel); font-size:1.1rem;">${v.placa}</strong></td>
                     <td><strong>${v.filial || '-'}</strong></td>
                     <td>${v.motorista}<br><small style="color:#7f8c8d">${v.email}</small></td>
+                    <td>${dataSaida}</td>
                     <td>${horaSaida}</td>
                     <td><span class="badge status-em-viagem">Em Viagem</span></td>
                     <td>Doca: ${v.doca} (${v.conferente})</td>
@@ -217,12 +224,12 @@
         const novoConferente = prompt("Editar Nome do Conferente:", conferenteAtual);
         
         if (novaFilial !== null || novaDoca !== null || novoConferente !== null) {
-            const dadosAtualizados = {};
-            if (novaFilial !== null) dadosAtualizados.filial = novaFilial.trim();
-            if (novaDoca !== null) dadosAtualizados.doca = novaDoca.trim();
-            if (novoConferente !== null) dadosAtualizados.conferente = novoConferente.trim();
+            const dadosUpdated = {};
+            if (novaFilial !== null) dadosUpdated.filial = novaFilial.trim();
+            if (novaDoca !== null) dadosUpdated.doca = novaDoca.trim();
+            if (novoConferente !== null) dadosUpdated.conferente = novoConferente.trim();
 
-            db.collection("fila_patio").doc(id).update(dadosAtualizados)
+            db.collection("fila_patio").doc(id).update(dadosUpdated)
             .catch(err => alert("Erro ao atualizar dados: " + err.message));
         }
     };
