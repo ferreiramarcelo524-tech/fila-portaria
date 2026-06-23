@@ -21,16 +21,15 @@
         hr { border: 0; border-top: 1px solid #eee; margin: 25px 0; }
         button { width: 100%; padding: 16px; background-color: var(--primary); color: white; border: none; border-radius: 8px; font-size: 1rem; font-weight: bold; cursor: pointer; transition: background 0.2s; margin-top: 15px; }
         button:hover { background-color: #0c4399; }
-        input[type="text"], select { width: 100%; padding: 16px; margin: 12px 0 25px 0; border: 2px solid var(--border); border-radius: 8px; box-sizing: border-box; font-size: 1.4rem; text-align: center; font-weight: bold; color: var(--primary); background: white; }
-        select { text-align-last: center; font-size: 1.1rem; }
-        input[type="text"]:focus, select:focus { border-color: var(--primary); outline: none; }
+        input[type="text"] { width: 100%; padding: 16px; margin: 12px 0 25px 0; border: 2px solid var(--border); border-radius: 8px; box-sizing: border-box; font-size: 1.5rem; text-align: center; font-weight: bold; text-transform: uppercase; letter-spacing: 2px; color: var(--primary); }
+        input[type="text"]:focus { border-color: var(--primary); outline: none; }
         input[type="text"]::placeholder { color: #bdc3c7; font-weight: normal; letter-spacing: normal; font-size: 1.2rem; }
         .user-info { background: #e8f0fe; padding: 15px; border-radius: 8px; font-size: 0.9rem; margin-bottom: 25px; border: 1px solid #d2e3fc; text-align: left; line-height: 1.4; }
         #reader { width: 100%; background: #000; border-radius: 8px; overflow: hidden; margin-top: 20px; min-height: 300px; border: 3px solid var(--primary); box-sizing: border-box; }
         #secao-sucesso div.icon { font-size: 6rem; color: var(--success); margin-bottom: 15px; }
         #secao-sucesso h3 { color: var(--success); margin: 0 0 12px 0; font-size: 1.5rem; }
         label { display:block; text-align:left; font-weight:bold; font-size: 0.9rem; color: #5c6b73; }
-        @media (max-width: 400px) { .container { padding: 20px; } h2 { font-size: 1.4rem; } input[type="text"], select { font-size: 1.2rem; } }
+        @media (max-width: 400px) { .container { padding: 20px; } h2 { font-size: 1.4rem; } input[type="text"] { font-size: 1.3rem; } }
     </style>
 </head>
 <body>
@@ -58,22 +57,8 @@
             <label for="placa">DIGITE A PLACA DO VEÍCULO (COM HÍFEN):</label>
             <input type="text" id="placa" placeholder="AAA-0A00" maxlength="8" autocomplete="off">
             
-            <label for="filial">SELECIONE A FILIAL DE DESTINO:</label>
-            <select id="filial">
-                <option value="" disabled selected>-- Escolha a Loja/Cidade --</option>
-                <option value="MARABÁ">MARABÁ</option>
-                <option value="PARAUAPEBAS">PARAUAPEBAS</option>
-                <option value="TUCUMÃ">TUCUMÃ</option>
-                <option value="GOIANÉSIA">GOIANÉSIA</option>
-                <option value="CANAÃ DOS CARAJÁS">CANAÃ DOS CARAJÁS</option>
-                <option value="TAILÂNDIA">TAILÂNDIA</option>
-                <option value="BELÉM">BELÉM</option>
-                <option value="CASTANHAL">CASTANHAL</option>
-                <option value="OUTRA / FILIAL EXTRA">OUTRA / FILIAL EXTRA</option>
-            </select>
-            
-            <p style="text-align: left; font-size: 0.9rem; line-height: 1.5; color: #7f8c8d;">⚠️ <strong>Passo Final:</strong> Após preencher a placa e o destino acima, clique no botão para abrir a câmera e escanear o QR Code da guarita.</p>
-            <button id="btn-abrir-camera">Abrir Câmera e Confirmar</button>
+            <p style="text-align: left; font-size: 0.9rem; line-height: 1.5; color: #7f8c8d;">⚠️ <strong>Passo Final:</strong> Após preencher a placa acima, clique no botão para abrir a câmera e escanear o QR Code de segurança da guarita.</p>
+            <button id="btn-abrir-camera">Abrir Câmera e Confirmar Presença</button>
         </div>
 
         <div id="reader" class="hidden"></div>
@@ -109,14 +94,12 @@
     const readerDiv = document.getElementById('reader');
     const userEmailSpan = document.getElementById('user-email');
     const placaInput = document.getElementById('placa');
-    const filialSelect = document.getElementById('filial');
 
     let html5QrCode = null;
 
     function gravarEntradaBanco() {
         db.collection("fila_patio").add({
             placa: placaInput.value.trim().toUpperCase(),
-            filialDestino: filialSelect.value, // Novo campo salvo no Firestore
             motorista: auth.currentUser.displayName || "Motorista",
             email: auth.currentUser.email.toLowerCase(),
             timestampChegada: Date.now(),
@@ -166,7 +149,7 @@
             (errorMessage) => {}
         ).catch((err) => {
             console.error("Erro na câmera: ", err);
-            alert("Erro ao acessar a câmera! Verifique as permissões no Chrome.");
+            alert("Erro ao acessar a câmera! Verifique as permissões de privacidade.");
             blocoFormulario.classList.remove('hidden');
             readerDiv.classList.add('hidden');
         });
@@ -201,18 +184,11 @@
     btnCamera.addEventListener('click', () => {
         const placa = placaInput.value.trim().toUpperCase();
         const emailMotorista = auth.currentUser.email.toLowerCase();
-        const filial = filialSelect.value;
 
         const regexPlaca = /^[A-Z]{3}-[0-9][A-Z0-9][0-9]{2}$/;
         if(!regexPlaca.test(placa)) {
             alert("🚫 FORMATO DE PLACA INVÁLIDO!\n\nA placa precisa conter o hífen.\n\nExemplo correto: AAA-0A00");
             placaInput.focus();
-            return;
-        }
-
-        if(!filial) {
-            alert("🚫 SELECIONE A FILIAL!\n\nVocê precisa selecionar a filial de destino antes de prosseguir.");
-            filialSelect.focus();
             return;
         }
 
