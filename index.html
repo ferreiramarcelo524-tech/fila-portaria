@@ -2,13 +2,20 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
+    <!-- Força o navegador do celular a carregar a versão nova ignorando o cache antigo -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Check-in Motorista - Portaria CD84</title>
     
+    <!-- Bibliotecas Firebase Compat (v10.8.0) -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
     
+    <!-- Biblioteca Leitor QR Code (html5-qrcode) -->
     <script src="https://unpkg.com/html5-qrcode"></script>
 
     <style>
@@ -39,6 +46,7 @@
     <p class="subtitle">Portaria Unidade CD84 - Marabá</p>
     <hr>
 
+    <!-- 1. SEÇÃO LOGIN -->
     <div id="secao-login">
         <p style="margin-bottom: 25px; line-height: 1.5;">Para iniciar o seu registro de chegada, valide a sua identidade usando a conta de e-mail do seu aparelho celular.</p>
         <button id="btn-login" style="background-color: #4285F4; display: flex; align-items: center; justify-content: center; gap: 10px;">
@@ -47,6 +55,7 @@
         </button>
     </div>
 
+    <!-- 2. SEÇÃO OPERAÇÃO -->
     <div id="secao-operacao" class="hidden">
         <div class="user-info">
             Identificado como:<br>
@@ -58,12 +67,14 @@
             <input type="text" id="placa" placeholder="AAA-0A00" maxlength="8" autocomplete="off">
             
             <p style="text-align: left; font-size: 0.9rem; line-height: 1.5; color: #7f8c8d;">⚠️ <strong>Passo Final:</strong> Após preencher a placa acima, clique no botão para abrir a câmera e escanear o QR Code de segurança da guarita.</p>
-            <button id="btn-abrir-camera">Abrir Câmera e Confirmar Presença</button>
+            <button id="btn-abrir-camera">Abrir Câmera e Confirmar</button>
         </div>
 
+        <!-- CONTAINER DA CÂMERA -->
         <div id="reader" class="hidden"></div>
     </div>
 
+    <!-- 3. SEÇÃO SUCESSO -->
     <div id="secao-sucesso" class="hidden">
         <div class="icon">✓</div>
         <h3>Check-in Realizado!</h3>
