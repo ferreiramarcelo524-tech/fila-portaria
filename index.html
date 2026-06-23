@@ -3,61 +3,81 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Check-in Motorista - Portaria</title>
+    <title>Check-in Motorista - Portaria CD84</title>
     
+    <!-- Bibliotecas Firebase Compat (v10.8.0) -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    
+    <!-- Biblioteca Leitor QR Code (html5-qrcode) -->
     <script src="https://unpkg.com/html5-qrcode"></script>
 
     <style>
-        :root { --primary: #0f52ba; --success: #2ecc71; --bg: #f5f6fa; --text: #2c3e50; }
-        body { font-family: 'Segoe UI', Arial, sans-serif; background-color: var(--bg); margin: 0; padding: 20px; display: flex; justify-content: center; align-items: center; min-height: 90vh; }
-        .container { width: 100%; max-width: 450px; background: white; padding: 30px 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); text-align: center; }
+        :root { --primary: #0f52ba; --success: #2ecc71; --bg: #f5f6fa; --text: #2c3e50; --border: #dcdde1; }
+        body { font-family: 'Segoe UI', Arial, sans-serif; background-color: var(--bg); margin: 0; padding: 20px; display: flex; justify-content: center; align-items: center; min-height: 100vh; color: var(--text); }
+        .container { width: 100%; max-width: 480px; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 5px 20px rgba(0,0,0,0.1); text-align: center; box-sizing: border-box; }
         .hidden { display: none !important; }
-        button { width: 100%; padding: 14px; background-color: var(--primary); color: white; border: none; border-radius: 6px; font-size: 1rem; font-weight: bold; cursor: pointer; margin-top: 15px; }
-        input { width: 100%; padding: 14px; margin: 10px 0 20px 0; border: 2px solid #dcdde1; border-radius: 6px; box-sizing: border-box; font-size: 1.4rem; text-align: center; font-weight: bold; text-transform: uppercase; letter-spacing: 2px; }
-        #reader { width: 100%; background: #000; border-radius: 8px; overflow: hidden; margin-top: 15px; min-height: 250px; }
-        .user-info { background: #e8f0fe; padding: 12px; border-radius: 6px; font-size: 0.9rem; margin-bottom: 20px; border: 1px solid #d2e3fc; text-align: left; }
+        h2 { margin-top: 0; color: var(--primary); font-size: 1.6rem; }
+        p.subtitle { color: #7f8c8d; margin-top: -10px; margin-bottom: 25px; font-size: 0.95rem; }
+        hr { border: 0; border-top: 1px solid #eee; margin: 25px 0; }
+        button { width: 100%; padding: 16px; background-color: var(--primary); color: white; border: none; border-radius: 8px; font-size: 1rem; font-weight: bold; cursor: pointer; transition: background 0.2s; margin-top: 15px; }
+        button:hover { background-color: #0c4399; }
+        input[type="text"] { width: 100%; padding: 16px; margin: 12px 0 25px 0; border: 2px solid var(--border); border-radius: 8px; box-sizing: border-box; font-size: 1.5rem; text-align: center; font-weight: bold; text-transform: uppercase; letter-spacing: 2px; color: var(--primary); }
+        input[type="text"]:focus { border-color: var(--primary); outline: none; }
+        input[type="text"]::placeholder { color: #bdc3c7; font-weight: normal; letter-spacing: normal; font-size: 1.2rem; }
+        .user-info { background: #e8f0fe; padding: 15px; border-radius: 8px; font-size: 0.9rem; margin-bottom: 25px; border: 1px solid #d2e3fc; text-align: left; line-height: 1.4; }
+        #reader { width: 100%; background: #000; border-radius: 8px; overflow: hidden; margin-top: 20px; min-height: 300px; border: 3px solid var(--primary); box-sizing: border-box; }
+        #secao-sucesso div.icon { font-size: 6rem; color: var(--success); margin-bottom: 15px; }
+        #secao-sucesso h3 { color: var(--success); margin: 0 0 12px 0; font-size: 1.5rem; }
+        @media (max-width: 400px) { .container { padding: 20px; } h2 { font-size: 1.4rem; } input[type="text"] { font-size: 1.3rem; } }
     </style>
 </head>
 <body>
 
 <div class="container">
     <h2>Check-in Eletrônico</h2>
-    <p>Validação Antifraude de Entrada</p>
-    <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
+    <p class="subtitle">Portaria Unidade CD84 - Marabá</p>
+    <hr>
 
+    <!-- 1. SEÇÃO LOGIN (APARECE PRIMEIRO) -->
     <div id="secao-login">
-        <p>Para iniciar o seu registro, valide a sua identidade usando a conta de e-mail do seu aparelho celular.</p>
-        <button id="btn-login">Entrar com Conta Google</button>
+        <p style="margin-bottom: 25px; line-height: 1.5;">Para iniciar o seu registro de chegada, valide a sua identidade usando a conta de e-mail do seu aparelho celular.</p>
+        <button id="btn-login" style="background-color: #4285F4; display: flex; align-items: center; justify-content: center; gap: 10px;">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/5/53/Google_%22G%22_Logo.svg" alt="G" style="width:20px; height:20px; background:white; padding:2px; border-radius:50%;">
+            Entrar com Conta Google
+        </button>
     </div>
 
+    <!-- 2. SEÇÃO OPERAÇÃO (APARECE PÓS-LOGIN) -->
     <div id="secao-operacao" class="hidden">
         <div class="user-info">
             Identificado como:<br>
-            <strong id="user-email">Carregando...</strong>
+            <strong id="user-email">Carregando dados do perfil...</strong>
         </div>
 
         <div id="bloco-formulario">
-            <label for="placa" style="display:block; text-align:left; font-weight:bold; font-size: 0.9rem;">DIGITE A PLACA DO VEÍCULO (COM HÍFEN):</label>
-            <input type="text" id="placa" placeholder="AAA-0A00" maxlength="8">
+            <label for="placa" style="display:block; text-align:left; font-weight:bold; font-size: 0.9rem; color: #5c6b73;">DIGITE A PLACA DO VEÍCULO (COM HÍFEN):</label>
+            <input type="text" id="placa" placeholder="AAA-0A00" maxlength="8" autocomplete="off">
             
-            <p style="text-align: left; font-size: 0.9rem;">⚠️ <strong>Passo Final:</strong> Após preencher os dados, clique abaixo para abrir a câmera e escanear o QR Code de segurança da guarita.</p>
-            <button id="btn-abrir-camera">Abrir Câmera e Confirmar Presença</button>
+            <p style="text-align: left; font-size: 0.9rem; line-height: 1.5; color: #7f8c8d;">⚠️ <strong>Passo Final:</strong> Após preencher a placa acima, clique no botão para abrir a câmera e escanear o QR Code de segurança da guarita.</p>
+            <button id="btn-abrir-camera">Abrir Câmera e Confirmar</button>
         </div>
 
+        <!-- CONTAINER DA CÂMERA (COMEÇA ESCONDIDO) -->
         <div id="reader" class="hidden"></div>
     </div>
 
+    <!-- 3. SEÇÃO SUCESSO (APARECE NO FINAL) -->
     <div id="secao-sucesso" class="hidden">
-        <div style="font-size: 5rem; color: var(--success); margin-bottom: 10px;">✓</div>
-        <h3 style="color: var(--success); margin: 0 0 10px 0;">Check-in Realizado!</h3>
-        <p>Sua chegada foi gravada. Aguarde no pátio ser chamado pelo painel.</p>
+        <div class="icon">✓</div>
+        <h3>Check-in Realizado!</h3>
+        <p style="line-height: 1.5; color: #7f8c8d;">Sua chegada foi gravada com sucesso. Estacione e aguarde ser chamado na doca pelo painel principal.</p>
     </div>
 </div>
 
 <script>
+    // Configuração oficial do Firebase Projeto Expedição
     const firebaseConfig = {
         apiKey: "AIzaSyCDv9K7VtXwe81eAzQteQb83IYkebPasgE",
         authDomain: "expedicao-antifraud.firebaseapp.com",
@@ -67,61 +87,77 @@
         appId: "1:683256630906:web:688866abf7f2d00e6eb5c3"
     };
     
+    // Inicialização do Firebase
     firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
     const db = firebase.firestore();
 
+    // Referências dos elementos DOM
     const secaoLogin = document.getElementById('secao-login');
     const secaoOperacao = document.getElementById('secao-operacao');
     const secaoSucesso = document.getElementById('secao-sucesso');
+    const blocoFormulario = document.getElementById('bloco-formulario');
     const btnLogin = document.getElementById('btn-login');
     const btnCamera = document.getElementById('btn-abrir-camera');
     const readerDiv = document.getElementById('reader');
     const userEmailSpan = document.getElementById('user-email');
     const placaInput = document.getElementById('placa');
 
+    // Instância global do leitor QR
     let html5QrCode;
 
-    // MÁSCARA AUTOMÁTICA: Insere o hífen na digitação
+    // --- MÁSCARA AUTOMÁTICA DA PLACA ---
     placaInput.addEventListener('input', (e) => {
         let value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+        // Adiciona hífen automaticamente após a 3ª letra
         if (value.length > 3) {
             value = value.substring(0, 3) + '-' + value.substring(3, 7);
         }
         e.target.value = value;
     });
 
+    // --- GERENCIAMENTO DE AUTENTICAÇÃO (LOGIN) ---
     btnLogin.addEventListener('click', () => {
         const provider = new firebase.auth.GoogleAuthProvider();
-        auth.signInWithPopup(provider).then((result) => {
-            verificarStatusUsuario(result.user);
-        }).catch((error) => {
-            alert("Falha ao autenticar: " + error.message);
+        auth.signInWithPopup(provider).catch((error) => {
+            alert("Falha ao autenticar com o Google. Verifique sua conexão ou tente novamente.\nErro: " + error.message);
         });
     });
 
     auth.onAuthStateChanged((user) => {
-        if (user) verificarStatusUsuario(user);
+        if (user) {
+            // Usuário logado
+            userEmailSpan.innerText = `${user.displayName}\n(${user.email})`;
+            secaoLogin.classList.add('hidden');
+            secaoOperacao.classList.remove('hidden');
+        } else {
+            // Usuário deslogado
+            secaoLogin.classList.remove('hidden');
+            secaoOperacao.classList.add('hidden');
+            secaoSucesso.classList.add('hidden');
+            readerDiv.classList.add('hidden');
+            blocoFormulario.classList.remove('hidden');
+            if (html5QrCode && html5QrCode.isScanning) {
+                html5QrCode.stop();
+            }
+        }
     });
 
-    function verificarStatusUsuario(user) {
-        userEmailSpan.innerText = user.displayName + " (" + user.email + ")";
-        secaoLogin.classList.add('hidden');
-        secaoOperacao.classList.remove('hidden');
-    }
-
+    // --- VALIDAÇÃO E ABERTURA DA CÂMERA (Onde ocorria o erro) ---
     btnCamera.addEventListener('click', () => {
         const placa = placaInput.value.trim().toUpperCase();
         const emailMotorista = auth.currentUser.email.toLowerCase();
 
-        // 1º BLOQUEIO: Validação do formato exigido por padrão
+        // 1. Validação do Formato da Placa (Padrão Antigo e Mercosul com hífen)
         const regexPlaca = /^[A-Z]{3}-[0-9][A-Z0-9][0-9]{2}$/;
         if(!regexPlaca.test(placa)) {
             alert("🚫 FORMATO DE PLACA INVÁLIDO!\n\nA placa precisa conter obrigatoriamente o hífen separando as letras.\n\nExemplo correto: AAA-0A00 ou ABC-1234");
+            placaInput.focus();
             return;
         }
 
-        // 2º BLOQUEIO: Validação Antiduplicidade Inteligente (Filtro Local Corrigido)
+        // 2. Validação Antiduplicidade Inteligente no Firestore (Filtro Local Robustecido)
+        // Bloqueia apenas se o veículo já estiver "Aguardando" ou "Em Doca".
         db.collection("fila_patio")
             .get()
             .then((snapshot) => {
@@ -131,8 +167,7 @@
                 snapshot.forEach((doc) => {
                     const dados = doc.data();
                     
-                    // ATENÇÃO: Só bloqueia se o registro NÃO estiver em viagem, finalizado ou cancelado.
-                    // Isso permite que veículos em viagem liberem espaço para um novo check-in de retorno.
+                    // Só considera duplicidade se o veículo não estiver em viagem, concluído ou cancelado.
                     if (dados.status !== "Em Viagem" && dados.status !== "Concluido" && dados.status !== "Cancelado") {
                         if (dados.placa && dados.placa.toUpperCase() === placa) {
                             placaDuplicada = true;
@@ -144,77 +179,96 @@
                 });
 
                 if (placaDuplicada) {
-                    alert("🚫 CADASTRO BLOQUEADO!\n\nEste veículo já está aguardando no pátio ou em processo de doca.");
+                    alert(`🚫 CADASTRO BLOQUEADO!\n\nO veículo com placa ${placa} já possui uma entrada ativa na fila física do pátio.`);
                     return;
                 }
 
                 if (emailDuplicado) {
-                    alert("🚫 CADASTRO BLOQUEADO!\n\nEste e-mail do Google já possui um registro ativo operando no pátio.");
+                    alert("🚫 CADASTRO BLOQUEADO!\n\nEste e-mail do Google já possui um registro operando no pátio.");
                     return;
                 }
 
-                // Se passou nas validações, libera a abertura da câmera com segurança
+                // --- Se passou em todas as validações, chama a função CORRIGIDA ---
                 executarAberturaCamera();
 
             }).catch((error) => {
-                console.error("Erro na validação: ", error);
-                alert("Erro ao validar dados no servidor: " + error.message);
+                console.error("Erro na validação antiduplicidade: ", error);
+                alert("Erro ao validar dados no servidor. Verifique sua conexão de internet.");
             });
     });
 
-    function ejecutarAberturaCamera() {
-        btnCamera.classList.add('hidden');
+    // --- FUNÇÃO CORRIGIDA E PRESENTE NO CÓDIGO ---
+    function executarAberturaCamera() {
+        // Esconde formulário e mostra container da câmera
+        blocoFormulario.classList.add('hidden');
         readerDiv.classList.remove('hidden');
 
+        // Inicializa biblioteca focando na câmera traseira (environment)
         html5QrCode = new Html5Qrcode("reader");
         html5QrCode.start(
             { facingMode: "environment" }, 
             { 
                 fps: 15, 
-                qrbox: { width: 250, height: 250 },
+                qrbox: { width: 280, height: 280 },
                 aspectRatio: 1.0
             },
             (decodedText) => {
+                // SUCESSO NA LEITURA: Para a câmera e processa o código
                 html5QrCode.stop().then(() => {
                     processarLeituraQRCode(decodedText);
                 }).catch(err => {
+                    // Se falhar ao parar, processa mesmo assim
                     processarLeituraQRCode(decodedText); 
                 });
             },
-            (errorMessage) => {}
+            (errorMessage) => {
+                // Falhas momentâneas de leitura (ignorar logs rápidos)
+            }
         ).catch(err => {
-            alert("Erro ao abrir a câmera! Use o navegador Google Chrome comum e aceite a permissão.\n\nDetalhe: " + err);
-            btnCamera.classList.remove('hidden');
+            // ERRO CRÍTICO AO ABRIR CÂMERA (Permissão ou Navegador incompatível)
+            console.error("Erro crítico na câmera: ", err);
+            alert("Erro ao acessar a câmera!\n\nCertifique-se de estar usando o Google Chrome atualizado e que aceitou a permissão de câmera para este site.");
+            // Reseta a tela
+            blocoFormulario.classList.remove('hidden');
             readerDiv.classList.add('hidden');
         });
     }
 
+    // --- PROCESSAMENTO FINAL E GRAVAÇÃO NO FIREBASE ---
     function processarLeituraQRCode(textoEscaneado) {
         const PALAVRA_CHAVE_OFICIAL = "PORTARIA_CD84_VALIDADO"; 
         const textoLimpo = textoEscaneado.trim();
 
+        // Valida se o QR Code lido é o oficial da guarita
         if (textoLimpo === PALAVRA_CHAVE_OFICIAL) {
+            // GRAVA NO FIREBASE FIRESTORE
             db.collection("fila_patio").add({
                 placa: placaInput.value.trim().toUpperCase(),
-                motorista: auth.currentUser.displayName || "Motorista",
+                motorista: auth.currentUser.displayName || "Motorista não identificado",
                 email: auth.currentUser.email.toLowerCase(),
                 timestampChegada: Date.now(),
                 status: "Aguardando",
                 doca: "-",
-                conferente: "-"
+                conferente: "-",
+                orgao: "Portaria CD84" // Metadado extra
             })
             .then(() => {
+                // TUDO CERTO: Mostra tela de sucesso final
                 secaoOperacao.classList.add('hidden');
                 secaoSucesso.classList.remove('hidden');
             })
             .catch((error) => {
-                alert("Erro ao salvar no painel: " + error.message);
-                btnCamera.classList.remove('hidden');
+                console.error("Erro ao gravar no banco: ", error);
+                alert("Erro ao salvar sua chegada no sistema: " + error.message + "\nPor favor, informe ao vigilante.");
+                // Reseta tela
+                blocoFormulario.classList.remove('hidden');
                 readerDiv.classList.add('hidden');
             });
         } else {
-            alert("Código Lido Inválido!\n\nVocê leu: '" + textoLimpo + "'\n\nO aplicativo espera o QR Code da Guarita com o texto: PORTARIA_CD84_VALIDADO");
-            btnCamera.classList.remove('hidden');
+            // QR CODE INVÁLIDO LIDO
+            alert("🚫 CÓDIGO INVÁLIDO!\n\nO QR Code escaneado não é o código de segurança oficial da guarita CD84.");
+            // Reseta tela para tentar de novo
+            blocoFormulario.classList.remove('hidden');
             readerDiv.classList.add('hidden');
         }
     }
