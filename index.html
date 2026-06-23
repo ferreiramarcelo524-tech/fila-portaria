@@ -5,12 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Check-in Motorista - Portaria CD84</title>
     
-    <!-- Bibliotecas Firebase Compat (v10.8.0) -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
     
-    <!-- Biblioteca Leitor QR Code (html5-qrcode) -->
     <script src="https://unpkg.com/html5-qrcode"></script>
 
     <style>
@@ -40,7 +38,6 @@
     <p class="subtitle">Portaria Unidade CD84 - Marabá</p>
     <hr>
 
-    <!-- 1. SEÇÃO LOGIN (APARECE PRIMEIRO) -->
     <div id="secao-login">
         <p style="margin-bottom: 25px; line-height: 1.5;">Para iniciar o seu registro de chegada, valide a sua identidade usando a conta de e-mail do seu aparelho celular.</p>
         <button id="btn-login" style="background-color: #4285F4; display: flex; align-items: center; justify-content: center; gap: 10px;">
@@ -49,7 +46,6 @@
         </button>
     </div>
 
-    <!-- 2. SEÇÃO OPERAÇÃO (APARECE PÓS-LOGIN) -->
     <div id="secao-operacao" class="hidden">
         <div class="user-info">
             Identificado como:<br>
@@ -64,11 +60,9 @@
             <button id="btn-abrir-camera">Abrir Câmera e Confirmar</button>
         </div>
 
-        <!-- CONTAINER DA CÂMERA (COMEÇA ESCONDIDO) -->
         <div id="reader" class="hidden"></div>
     </div>
 
-    <!-- 3. SEÇÃO SUCESSO (APARECE NO FINAL) -->
     <div id="secao-sucesso" class="hidden">
         <div class="icon">✓</div>
         <h3>Check-in Realizado!</h3>
@@ -103,175 +97,151 @@
     const userEmailSpan = document.getElementById('user-email');
     const placaInput = document.getElementById('placa');
 
-    // Instância global do leitor QR
-    let html5QrCode;
+    // Instância do leitor QR
+    let html5QrCode = null;
 
-    // --- MÁSCARA AUTOMÁTICA DA PLACA ---
+    // --- FUNÇÃO 1: GRAVAR ENTRADA FINAL NO FIRESTORE ---
+    function gravarEntradaBanco() {
+        db.collection("fila_patio").add({
+            placa: placaInput.value.trim().toUpperCase(),
+            motorista: auth.currentUser.displayName || "Motorista",
+            email: auth.currentUser.email.toLowerCase(),
+            timestampChegada: Date.now(),
+            status: "Aguardando",
+            doca: "-",
+            conferente: "-",
+            orgao: "Portaria CD84"
+        })
+        .then(() => {
+            secaoOperacao.classList.add('hidden');
+            secaoSucesso.classList.remove('hidden');
+        })
+        .catch((error) => {
+            console.error("Erro ao gravar no banco: ", error);
+            alert("Erro ao salvar sua chegada no sistema: " + error.message);
+            blocoFormulario.classList.remove('hidden');
+            readerDiv.classList.add('hidden');
+        });
+    }
+
+    // --- FUNÇÃO 2: PROCESSAR TEXTO DO QR CODE ---
+    function processarLeituraQRCode(textoEscaneado) {
+        const PALAVRA_CHAVE_OFICIAL = "PORTARIA_CD84_VALIDADO"; 
+        if (textoEscaneado.trim() === PALAVRA_CHAVE_OFICIAL) {
+            gravarEntradaBanco();
+        } else {
+            alert("🚫 CÓDIGO INVÁLIDO!\n\nO QR Code escaneado não é o código de segurança oficial da guarita CD84.");
+            blocoFormulario.classList.remove('hidden');
+            readerDiv.classList.add('hidden');
+        }
+    }
+
+    // --- FUNÇÃO 3: ABERTURA COMPLETA DA CÂMERA ---
+    function executarAberturaCamera() {
+        blocoFormulario.classList.add('hidden');
+        readerDiv.classList.remove('hidden');
+
+        html5QrCode = new Html5Qrcode("reader");
+        html5QrCode.start(
+            { facingMode: "environment" }, 
+            { fps: 15, qrbox: { width: 280, height: 280 }, aspectRatio: 1.0 },
+            (decodedText) => {
+                html5QrCode.stop().then(() => {
+                    processarLeituraQRCode(decodedText);
+                }).catch(() => {
+                    processarLeituraQRCode(decodedText); 
+                });
+            },
+            (errorMessage) => {}
+        ).catch((err) => {
+            console.error("Erro na câmera: ", err);
+            alert("Erro ao acessar a câmera!\n\nCertifique-se de usar o Google Chrome comum e dar permissão de câmera.");
+            blocoFormulario.classList.remove('hidden');
+            readerDiv.classList.add('hidden');
+        });
+    }
+
+    // --- ESCUTADORES DE EVENTOS ---
+
+    // Máscara automática da placa
     placaInput.addEventListener('input', (e) => {
         let value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
-        // Adiciona hífen automaticamente após a 3ª letra
         if (value.length > 3) {
             value = value.substring(0, 3) + '-' + value.substring(3, 7);
         }
         e.target.value = value;
     });
 
-    // --- GERENCIAMENTO DE AUTENTICAÇÃO (LOGIN) ---
+    // Login com Google
     btnLogin.addEventListener('click', () => {
         const provider = new firebase.auth.GoogleAuthProvider();
         auth.signInWithPopup(provider).catch((error) => {
-            alert("Falha ao autenticar com o Google. Verifique sua conexão ou tente novamente.\nErro: " + error.message);
+            alert("Falha ao autenticar com o Google: " + error.message);
         });
     });
 
+    // Monitor do estado do Login
     auth.onAuthStateChanged((user) => {
         if (user) {
-            // Usuário logado
-            userEmailSpan.innerText = `${user.displayName}\n(${user.email})`;
+            userEmailSpan.innerText = user.displayName + "\n(" + user.email + ")";
             secaoLogin.classList.add('hidden');
             secaoOperacao.classList.remove('hidden');
         } else {
-            // Usuário deslogado
             secaoLogin.classList.remove('hidden');
             secaoOperacao.classList.add('hidden');
-            secaoSucesso.classList.add('hidden');
-            readerDiv.classList.add('hidden');
-            blocoFormulario.classList.remove('hidden');
-            if (html5QrCode && html5QrCode.isScanning) {
-                html5QrCode.stop();
-            }
         }
     });
 
-    // --- VALIDAÇÃO E ABERTURA DA CÂMERA (Onde ocorria o erro) ---
+    // Botão Principal: Dispara Validações e abre a Câmera
     btnCamera.addEventListener('click', () => {
         const placa = placaInput.value.trim().toUpperCase();
         const emailMotorista = auth.currentUser.email.toLowerCase();
 
-        // 1. Validação do Formato da Placa (Padrão Antigo e Mercosul com hífen)
+        // 1. Validação do Formato da Placa
         const regexPlaca = /^[A-Z]{3}-[0-9][A-Z0-9][0-9]{2}$/;
         if(!regexPlaca.test(placa)) {
-            alert("🚫 FORMATO DE PLACA INVÁLIDO!\n\nA placa precisa conter obrigatoriamente o hífen separando as letras.\n\nExemplo correto: AAA-0A00 ou ABC-1234");
+            alert("🚫 FORMATO DE PLACA INVÁLIDO!\n\nA placa precisa conter o hífen.\n\nExemplo correto: AAA-0A00 ou ABC-1234");
             placaInput.focus();
             return;
         }
 
-        // 2. Validação Antiduplicidade Inteligente no Firestore (Filtro Local Robustecido)
-        // Bloqueia apenas se o veículo já estiver "Aguardando" ou "Em Doca".
-        db.collection("fila_patio")
-            .get()
-            .then((snapshot) => {
-                let placaDuplicada = false;
-                let emailDuplicado = false;
+        // 2. Validação Antiduplicidade Inteligente (Filtro Corrigido)
+        db.collection("fila_patio").get().then((snapshot) => {
+            let placaDuplicada = false;
+            let emailDuplicado = false;
 
-                snapshot.forEach((doc) => {
-                    const dados = doc.data();
-                    
-                    // Só considera duplicidade se o veículo não estiver em viagem, concluído ou cancelado.
-                    if (dados.status !== "Em Viagem" && dados.status !== "Concluido" && dados.status !== "Cancelado") {
-                        if (dados.placa && dados.placa.toUpperCase() === placa) {
-                            placaDuplicada = true;
-                        }
-                        if (dados.email && dados.email.toLowerCase() === emailMotorista) {
-                            emailDuplicado = true;
-                        }
+            snapshot.forEach((doc) => {
+                const dados = doc.data();
+                
+                // Só barra se o registro ativo estiver no Pátio esperando ou operando na Doca.
+                if (dados.status !== "Em Viagem" && dados.status !== "Concluido" && dados.status !== "Cancelado") {
+                    if (dados.placa && dados.placa.toUpperCase() === placa) {
+                        placaDuplicada = true;
                     }
-                });
-
-                if (placaDuplicada) {
-                    alert(`🚫 CADASTRO BLOQUEADO!\n\nO veículo com placa ${placa} já possui uma entrada ativa na fila física do pátio.`);
-                    return;
+                    if (dados.email && dados.email.toLowerCase() === emailMotorista) {
+                        emailDuplicado = true;
+                    }
                 }
-
-                if (emailDuplicado) {
-                    alert("🚫 CADASTRO BLOQUEADO!\n\nEste e-mail do Google já possui um registro operando no pátio.");
-                    return;
-                }
-
-                // --- Se passou em todas as validações, chama a função CORRIGIDA ---
-                executarAberturaCamera();
-
-            }).catch((error) => {
-                console.error("Erro na validação antiduplicidade: ", error);
-                alert("Erro ao validar dados no servidor. Verifique sua conexão de internet.");
             });
-    });
 
-    // --- FUNÇÃO CORRIGIDA E PRESENTE NO CÓDIGO ---
-    function executarAberturaCamera() {
-        // Esconde formulário e mostra container da câmera
-        blocoFormulario.classList.add('hidden');
-        readerDiv.classList.remove('hidden');
-
-        // Inicializa biblioteca focando na câmera traseira (environment)
-        html5QrCode = new Html5Qrcode("reader");
-        html5QrCode.start(
-            { facingMode: "environment" }, 
-            { 
-                fps: 15, 
-                qrbox: { width: 280, height: 280 },
-                aspectRatio: 1.0
-            },
-            (decodedText) => {
-                // SUCESSO NA LEITURA: Para a câmera e processa o código
-                html5QrCode.stop().then(() => {
-                    processarLeituraQRCode(decodedText);
-                }).catch(err => {
-                    // Se falhar ao parar, processa mesmo assim
-                    processarLeituraQRCode(decodedText); 
-                });
-            },
-            (errorMessage) => {
-                // Falhas momentâneas de leitura (ignorar logs rápidos)
+            if (placaDuplicada) {
+                alert(`🚫 CADASTRO BLOQUEADO!\n\nEste veículo (${placa}) já está registrado aguardando no pátio ou em processo de doca.`);
+                return;
             }
-        ).catch(err => {
-            // ERRO CRÍTICO AO ABRIR CÂMERA (Permissão ou Navegador incompatível)
-            console.error("Erro crítico na câmera: ", err);
-            alert("Erro ao acessar a câmera!\n\nCertifique-se de estar usando o Google Chrome atualizado e que aceitou a permissão de câmera para este site.");
-            // Reseta a tela
-            blocoFormulario.classList.remove('hidden');
-            readerDiv.classList.add('hidden');
+
+            if (emailDuplicado) {
+                alert("🚫 CADASTRO BLOQUEADO!\n\nSeu e-mail já possui um check-in pendente de finalização no pátio.");
+                return;
+            }
+
+            // EXECUTAR CÂMERA (Chamada linear segura)
+            executarAberturaCamera();
+
+        }).catch((error) => {
+            console.error("Erro na validação: ", error);
+            alert("Erro ao processar dados de antiduplicidade. Tente novamente.");
         });
-    }
-
-    // --- PROCESSAMENTO FINAL E GRAVAÇÃO NO FIREBASE ---
-    function processarLeituraQRCode(textoEscaneado) {
-        const PALAVRA_CHAVE_OFICIAL = "PORTARIA_CD84_VALIDADO"; 
-        const textoLimpo = textoEscaneado.trim();
-
-        // Valida se o QR Code lido é o oficial da guarita
-        if (textoLimpo === PALAVRA_CHAVE_OFICIAL) {
-            // GRAVA NO FIREBASE FIRESTORE
-            db.collection("fila_patio").add({
-                placa: placaInput.value.trim().toUpperCase(),
-                motorista: auth.currentUser.displayName || "Motorista não identificado",
-                email: auth.currentUser.email.toLowerCase(),
-                timestampChegada: Date.now(),
-                status: "Aguardando",
-                doca: "-",
-                conferente: "-",
-                orgao: "Portaria CD84" // Metadado extra
-            })
-            .then(() => {
-                // TUDO CERTO: Mostra tela de sucesso final
-                secaoOperacao.classList.add('hidden');
-                secaoSucesso.classList.remove('hidden');
-            })
-            .catch((error) => {
-                console.error("Erro ao gravar no banco: ", error);
-                alert("Erro ao salvar sua chegada no sistema: " + error.message + "\nPor favor, informe ao vigilante.");
-                // Reseta tela
-                blocoFormulario.classList.remove('hidden');
-                readerDiv.classList.add('hidden');
-            });
-        } else {
-            // QR CODE INVÁLIDO LIDO
-            alert("🚫 CÓDIGO INVÁLIDO!\n\nO QR Code escaneado não é o código de segurança oficial da guarita CD84.");
-            // Reseta tela para tentar de novo
-            blocoFormulario.classList.remove('hidden');
-            readerDiv.classList.add('hidden');
-        }
-    }
+    });
 </script>
 </body>
 </html>
