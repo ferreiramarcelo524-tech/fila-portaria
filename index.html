@@ -21,14 +21,16 @@
         hr { border: 0; border-top: 1px solid #eee; margin: 25px 0; }
         button { width: 100%; padding: 16px; background-color: var(--primary); color: white; border: none; border-radius: 8px; font-size: 1rem; font-weight: bold; cursor: pointer; transition: background 0.2s; margin-top: 15px; }
         button:hover { background-color: #0c4399; }
-        input[type="text"] { width: 100%; padding: 16px; margin: 12px 0 25px 0; border: 2px solid var(--border); border-radius: 8px; box-sizing: border-box; font-size: 1.5rem; text-align: center; font-weight: bold; text-transform: uppercase; letter-spacing: 2px; color: var(--primary); }
-        input[type="text"]:focus { border-color: var(--primary); outline: none; }
+        input[type="text"], select { width: 100%; padding: 16px; margin: 12px 0 25px 0; border: 2px solid var(--border); border-radius: 8px; box-sizing: border-box; font-size: 1.4rem; text-align: center; font-weight: bold; color: var(--primary); background: white; }
+        select { text-align-last: center; font-size: 1.1rem; }
+        input[type="text"]:focus, select:focus { border-color: var(--primary); outline: none; }
         input[type="text"]::placeholder { color: #bdc3c7; font-weight: normal; letter-spacing: normal; font-size: 1.2rem; }
         .user-info { background: #e8f0fe; padding: 15px; border-radius: 8px; font-size: 0.9rem; margin-bottom: 25px; border: 1px solid #d2e3fc; text-align: left; line-height: 1.4; }
         #reader { width: 100%; background: #000; border-radius: 8px; overflow: hidden; margin-top: 20px; min-height: 300px; border: 3px solid var(--primary); box-sizing: border-box; }
         #secao-sucesso div.icon { font-size: 6rem; color: var(--success); margin-bottom: 15px; }
         #secao-sucesso h3 { color: var(--success); margin: 0 0 12px 0; font-size: 1.5rem; }
-        @media (max-width: 400px) { .container { padding: 20px; } h2 { font-size: 1.4rem; } input[type="text"] { font-size: 1.3rem; } }
+        label { display:block; text-align:left; font-weight:bold; font-size: 0.9rem; color: #5c6b73; }
+        @media (max-width: 400px) { .container { padding: 20px; } h2 { font-size: 1.4rem; } input[type="text"], select { font-size: 1.2rem; } }
     </style>
 </head>
 <body>
@@ -53,10 +55,24 @@
         </div>
 
         <div id="bloco-formulario">
-            <label for="placa" style="display:block; text-align:left; font-weight:bold; font-size: 0.9rem; color: #5c6b73;">DIGITE A PLACA DO VEÍCULO (COM HÍFEN):</label>
+            <label for="placa">DIGITE A PLACA DO VEÍCULO (COM HÍFEN):</label>
             <input type="text" id="placa" placeholder="AAA-0A00" maxlength="8" autocomplete="off">
             
-            <p style="text-align: left; font-size: 0.9rem; line-height: 1.5; color: #7f8c8d;">⚠️ <strong>Passo Final:</strong> Após preencher a placa acima, clique no botão para abrir a câmera e escanear o QR Code de segurança da guarita.</p>
+            <label for="filial">SELECIONE A FILIAL DE DESTINO:</label>
+            <select id="filial">
+                <option value="" disabled selected>-- Escolha a Loja/Cidade --</option>
+                <option value="MARABÁ">MARABÁ</option>
+                <option value="PARAUAPEBAS">PARAUAPEBAS</option>
+                <option value="TUCUMÃ">TUCUMÃ</option>
+                <option value="GOIANÉSIA">GOIANÉSIA</option>
+                <option value="CANAÃ DOS CARAJÁS">CANAÃ DOS CARAJÁS</option>
+                <option value="TAILÂNDIA">TAILÂNDIA</option>
+                <option value="BELÉM">BELÉM</option>
+                <option value="CASTANHAL">CASTANHAL</option>
+                <option value="OUTRA / FILIAL EXTRA">OUTRA / FILIAL EXTRA</option>
+            </select>
+            
+            <p style="text-align: left; font-size: 0.9rem; line-height: 1.5; color: #7f8c8d;">⚠️ <strong>Passo Final:</strong> Após preencher a placa e o destino acima, clique no botão para abrir a câmera e escanear o QR Code da guarita.</p>
             <button id="btn-abrir-camera">Abrir Câmera e Confirmar</button>
         </div>
 
@@ -71,7 +87,6 @@
 </div>
 
 <script>
-    // Configuração oficial do Firebase Projeto Expedição
     const firebaseConfig = {
         apiKey: "AIzaSyCDv9K7VtXwe81eAzQteQb83IYkebPasgE",
         authDomain: "expedicao-antifraud.firebaseapp.com",
@@ -81,12 +96,10 @@
         appId: "1:683256630906:web:688866abf7f2d00e6eb5c3"
     };
     
-    // Inicialização do Firebase
     firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
     const db = firebase.firestore();
 
-    // Referências dos elementos DOM
     const secaoLogin = document.getElementById('secao-login');
     const secaoOperacao = document.getElementById('secao-operacao');
     const secaoSucesso = document.getElementById('secao-sucesso');
@@ -96,14 +109,14 @@
     const readerDiv = document.getElementById('reader');
     const userEmailSpan = document.getElementById('user-email');
     const placaInput = document.getElementById('placa');
+    const filialSelect = document.getElementById('filial');
 
-    // Instância do leitor QR
     let html5QrCode = null;
 
-    // --- FUNÇÃO 1: GRAVAR ENTRADA FINAL NO FIRESTORE ---
     function gravarEntradaBanco() {
         db.collection("fila_patio").add({
             placa: placaInput.value.trim().toUpperCase(),
+            filialDestino: filialSelect.value, // Novo campo salvo no Firestore
             motorista: auth.currentUser.displayName || "Motorista",
             email: auth.currentUser.email.toLowerCase(),
             timestampChegada: Date.now(),
@@ -124,7 +137,6 @@
         });
     }
 
-    // --- FUNÇÃO 2: PROCESSAR TEXTO DO QR CODE ---
     function processarLeituraQRCode(textoEscaneado) {
         const PALAVRA_CHAVE_OFICIAL = "PORTARIA_CD84_VALIDADO"; 
         if (textoEscaneado.trim() === PALAVRA_CHAVE_OFICIAL) {
@@ -136,7 +148,6 @@
         }
     }
 
-    // --- FUNÇÃO 3: ABERTURA COMPLETA DA CÂMERA ---
     function executarAberturaCamera() {
         blocoFormulario.classList.add('hidden');
         readerDiv.classList.remove('hidden');
@@ -155,15 +166,12 @@
             (errorMessage) => {}
         ).catch((err) => {
             console.error("Erro na câmera: ", err);
-            alert("Erro ao acessar a câmera!\n\nCertifique-se de usar o Google Chrome comum e dar permissão de câmera.");
+            alert("Erro ao acessar a câmera! Verifique as permissões no Chrome.");
             blocoFormulario.classList.remove('hidden');
             readerDiv.classList.add('hidden');
         });
     }
 
-    // --- ESCUTADORES DE EVENTOS ---
-
-    // Máscara automática da placa
     placaInput.addEventListener('input', (e) => {
         let value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
         if (value.length > 3) {
@@ -172,7 +180,6 @@
         e.target.value = value;
     });
 
-    // Login com Google
     btnLogin.addEventListener('click', () => {
         const provider = new firebase.auth.GoogleAuthProvider();
         auth.signInWithPopup(provider).catch((error) => {
@@ -180,7 +187,6 @@
         });
     });
 
-    // Monitor do estado do Login
     auth.onAuthStateChanged((user) => {
         if (user) {
             userEmailSpan.innerText = user.displayName + "\n(" + user.email + ")";
@@ -192,28 +198,30 @@
         }
     });
 
-    // Botão Principal: Dispara Validações e abre a Câmera
     btnCamera.addEventListener('click', () => {
         const placa = placaInput.value.trim().toUpperCase();
         const emailMotorista = auth.currentUser.email.toLowerCase();
+        const filial = filialSelect.value;
 
-        // 1. Validação do Formato da Placa
         const regexPlaca = /^[A-Z]{3}-[0-9][A-Z0-9][0-9]{2}$/;
         if(!regexPlaca.test(placa)) {
-            alert("🚫 FORMATO DE PLACA INVÁLIDO!\n\nA placa precisa conter o hífen.\n\nExemplo correto: AAA-0A00 ou ABC-1234");
+            alert("🚫 FORMATO DE PLACA INVÁLIDO!\n\nA placa precisa conter o hífen.\n\nExemplo correto: AAA-0A00");
             placaInput.focus();
             return;
         }
 
-        // 2. Validação Antiduplicidade Inteligente (Filtro Corrigido)
+        if(!filial) {
+            alert("🚫 SELECIONE A FILIAL!\n\nVocê precisa selecionar a filial de destino antes de prosseguir.");
+            filialSelect.focus();
+            return;
+        }
+
         db.collection("fila_patio").get().then((snapshot) => {
             let placaDuplicada = false;
             let emailDuplicado = false;
 
             snapshot.forEach((doc) => {
                 const dados = doc.data();
-                
-                // Só barra se o registro ativo estiver no Pátio esperando ou operando na Doca.
                 if (dados.status !== "Em Viagem" && dados.status !== "Concluido" && dados.status !== "Cancelado") {
                     if (dados.placa && dados.placa.toUpperCase() === placa) {
                         placaDuplicada = true;
@@ -225,21 +233,20 @@
             });
 
             if (placaDuplicada) {
-                alert(`🚫 CADASTRO BLOQUEADO!\n\nEste veículo (${placa}) já está registrado aguardando no pátio ou em processo de doca.`);
+                alert(`🚫 CADASTRO BLOQUEADO!\n\nEste veículo (${placa}) já está registrado pátio.`);
                 return;
             }
 
             if (emailDuplicado) {
-                alert("🚫 CADASTRO BLOQUEADO!\n\nSeu e-mail já possui um check-in pendente de finalização no pátio.");
+                alert("🚫 CADASTRO BLOQUEADO!\n\nSeu e-mail já possui um check-in ativo.");
                 return;
             }
 
-            // EXECUTAR CÂMERA (Chamada linear segura)
             executarAberturaCamera();
 
         }).catch((error) => {
             console.error("Erro na validação: ", error);
-            alert("Erro ao processar dados de antiduplicidade. Tente novamente.");
+            alert("Erro ao processar dados de antiduplicidade.");
         });
     });
 </script>
