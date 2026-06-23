@@ -41,7 +41,6 @@
 
         <div id="bloco-formulario">
             <label for="placa" style="display:block; text-align:left; font-weight:bold; font-size: 0.9rem;">DIGITE A PLACA DO VEÍCULO (COM HÍFEN):</label>
-            <!-- EXEMPLO FICTÍCIO NO PLACEHOLDER -->
             <input type="text" id="placa" placeholder="AAA-0A00" maxlength="8">
             
             <p style="text-align: left; font-size: 0.9rem;">⚠️ <strong>Passo Final:</strong> Após preencher os dados, clique abaixo para abrir a câmera e escanear o QR Code de segurança da guarita.</p>
@@ -83,7 +82,7 @@
 
     let html5QrCode;
 
-    // MÁSCARA AUTOMÁTICA: Adiciona o hífen enquanto o motorista digita
+    // MÁSCARA AUTOMÁTICA: Insere o hífen na digitação
     placaInput.addEventListener('input', (e) => {
         let value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
         if (value.length > 3) {
@@ -115,16 +114,15 @@
         const placa = placaInput.value.trim().toUpperCase();
         const emailMotorista = auth.currentUser.email.toLowerCase();
 
-        // 1º BLOQUEIO: Validação do formato exato usando exemplo fictício no alerta
+        // 1º BLOQUEIO: Validação do formato exigido por padrão
         const regexPlaca = /^[A-Z]{3}-[0-9][A-Z0-9][0-9]{2}$/;
         if(!regexPlaca.test(placa)) {
             alert("🚫 FORMATO DE PLACA INVÁLIDO!\n\nA placa precisa conter obrigatoriamente o hífen separando as letras.\n\nExemplo correto: AAA-0A00 ou ABC-1234");
             return;
         }
 
-        // 2º BLOQUEIO: Validação Antiduplicidade no Firestore
+        // 2º BLOQUEIO: Validação Antiduplicidade corrigida (Filtro local robusto)
         db.collection("fila_patio")
-            .where("status", "in", ["Aguardando", "Em Doca"])
             .get()
             .then((snapshot) => {
                 let placaDuplicada = false;
@@ -132,11 +130,14 @@
 
                 snapshot.forEach((doc) => {
                     const dados = doc.data();
-                    if (dados.placa && dados.placa.toUpperCase() === placa) {
-                        placaDuplicada = true;
-                    }
-                    if (dados.email && dados.email.toLowerCase() === emailMotorista) {
-                        emailDuplicado = true;
+                    // Só analisa veículos que ainda estão operando no pátio ou na doca
+                    if (dados.status === "Aguardando" || dados.status === "Em Doca") {
+                        if (dados.placa && dados.placa.toUpperCase() === placa) {
+                            placaDuplicada = true;
+                        }
+                        if (dados.email && dados.email.toLowerCase() === emailMotorista) {
+                            emailDuplicado = true;
+                        }
                     }
                 });
 
@@ -150,15 +151,16 @@
                     return;
                 }
 
+                // Se passou nas validações, libera a abertura da câmera com segurança
                 executarAberturaCamera();
 
             }).catch((error) => {
-                console.error("Erro na validação de antifraude: ", error);
-                alert("Erro ao validar dados no servidor. Verifique sua conexão de internet.");
+                console.error("Erro na validação: ", error);
+                alert("Erro ao validar dados no servidor: " + error.message + "\n\nSe o erro persistir, verifique a conexão de internet do celular.");
             });
     });
 
-    function ejecutarAberturaCamera() {
+    function executarAberturaCamera() {
         btnCamera.classList.add('hidden');
         readerDiv.classList.remove('hidden');
 
