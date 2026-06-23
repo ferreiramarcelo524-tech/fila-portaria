@@ -40,7 +40,7 @@
         </div>
 
         <div id="bloco-formulario">
-            <label for="placa" style="display:block; text-align:left; font-weight:bold; font-size: 0.9rem;">    DIGITE A PLACA DO VEÍCULO </label>
+            <label for="placa" style="display:block; text-align:left; font-weight:bold; font-size: 0.9rem;">DIGITE A PLACA DO VEÍCULO (COM HÍFEN):</label>
             <input type="text" id="placa" placeholder="AAA-0A00" maxlength="8">
             
             <p style="text-align: left; font-size: 0.9rem;">⚠️ <strong>Passo Final:</strong> Após preencher os dados, clique abaixo para abrir a câmera e escanear o QR Code de segurança da guarita.</p>
@@ -121,7 +121,7 @@
             return;
         }
 
-        // 2º BLOQUEIO: Validação Antiduplicidade corrigida (Filtro local robusto)
+        // 2º BLOQUEIO: Validação Antiduplicidade Inteligente (Filtro Local Corrigido)
         db.collection("fila_patio")
             .get()
             .then((snapshot) => {
@@ -130,8 +130,10 @@
 
                 snapshot.forEach((doc) => {
                     const dados = doc.data();
-                    // Só analisa veículos que ainda estão operando no pátio ou na doca
-                    if (dados.status === "Aguardando" || dados.status === "Em Doca") {
+                    
+                    // ATENÇÃO: Só bloqueia se o registro NÃO estiver em viagem, finalizado ou cancelado.
+                    // Isso permite que veículos em viagem liberem espaço para um novo check-in de retorno.
+                    if (dados.status !== "Em Viagem" && dados.status !== "Concluido" && dados.status !== "Cancelado") {
                         if (dados.placa && dados.placa.toUpperCase() === placa) {
                             placaDuplicada = true;
                         }
@@ -142,12 +144,12 @@
                 });
 
                 if (placaDuplicada) {
-                    alert("🚫 CADASTRO BLOQUEADO!\n\nEste veículo (Placa) já possui uma entrada ativa na fila e não pode entrar duas vezes.");
+                    alert("🚫 CADASTRO BLOQUEADO!\n\nEste veículo já está aguardando no pátio ou em processo de doca.");
                     return;
                 }
 
                 if (emailDuplicado) {
-                    alert("🚫 CADASTRO BLOQUEADO!\n\nEste e-mail do Google já possui uma entrada ativa na fila do pátio.");
+                    alert("🚫 CADASTRO BLOQUEADO!\n\nEste e-mail do Google já possui um registro ativo operando no pátio.");
                     return;
                 }
 
@@ -156,11 +158,11 @@
 
             }).catch((error) => {
                 console.error("Erro na validação: ", error);
-                alert("Erro ao validar dados no servidor: " + error.message + "\n\nSe o erro persistir, verifique a conexão de internet do celular.");
+                alert("Erro ao validar dados no servidor: " + error.message);
             });
     });
 
-    function executarAberturaCamera() {
+    function ejecutarAberturaCamera() {
         btnCamera.classList.add('hidden');
         readerDiv.classList.remove('hidden');
 
