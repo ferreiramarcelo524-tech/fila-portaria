@@ -135,7 +135,15 @@
         }
     }
 
-    db.collection("fila_patio").onSnapshot((snapshot) => {
+    // OTIMIZAÇÃO: documentos com status "Concluido" ou "Cancelado" nunca
+    // são exibidos no painel. Antes, o listener baixava a coleção inteira
+    // (incluindo todo o histórico finalizado) a cada conexão/reconexão.
+    // Agora filtramos direto no Firestore, trazendo somente os status que
+    // realmente aparecem na tela. Isso reduz as leituras cobradas
+    // conforme o histórico de viagens cresce ao longo do tempo.
+    db.collection("fila_patio")
+      .where("status", "in", ["Aguardando", "Em Doca", "Em Viagem"])
+      .onSnapshot((snapshot) => {
         const tabelaPatio = document.getElementById('tabelaPatioCorpo');
         const msgPatio = document.getElementById('msgPatioVazio');
         const tabelaViagem = document.getElementById('tabelaViagemCorpo');
