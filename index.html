@@ -203,19 +203,24 @@
             return;
         }
 
-        db.collection("fila_patio").get().then((snapshot) => {
+        // OTIMIZAÇÃO: antes buscávamos TODA a coleção (histórico completo)
+        // a cada clique. Agora filtramos direto no Firestore, trazendo
+        // somente os documentos com status ativo (Aguardando/Em Doca).
+        // Isso reduz drasticamente o número de leituras cobradas pelo
+        // Firestore, especialmente conforme o histórico de viagens cresce.
+        db.collection("fila_patio")
+          .where("status", "in", ["Aguardando", "Em Doca"])
+          .get().then((snapshot) => {
             let placaDuplicada = false;
             let emailDuplicado = false;
 
             snapshot.forEach((doc) => {
                 const dados = doc.data();
-                if (dados.status !== "Em Viagem" && dados.status !== "Concluido" && dados.status !== "Cancelado") {
-                    if (dados.placa && dados.placa.toUpperCase() === placa) {
-                        placaDuplicada = true;
-                    }
-                    if (dados.email && dados.email.toLowerCase() === emailMotorista) {
-                        emailDuplicado = true;
-                    }
+                if (dados.placa && dados.placa.toUpperCase() === placa) {
+                    placaDuplicada = true;
+                }
+                if (dados.email && dados.email.toLowerCase() === emailMotorista) {
+                    emailDuplicado = true;
                 }
             });
 
