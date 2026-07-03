@@ -140,25 +140,38 @@
         const msgPatio = document.getElementById('msgPatioVazio');
         const tabelaViagem = document.getElementById('tabelaViagemCorpo');
         const msgViagem = document.getElementById('msgViagemVazio');
-        
-        let noPatio = [];
-        let emViagem = [];
-        let placasAtivas = {};
+
+        // =====================================================================
+        // ALGORITMO: considerar apenas a viagem MAIS RECENTE de cada placa.
+        // Uma única passagem (O(n)) monta um mapa placa -> documento mais
+        // recente (maior timestampChegada). Qualquer documento antigo da
+        // mesma placa (Concluido, Cancelado, Em Viagem antiga, etc.) é
+        // automaticamente descartado e NUNCA volta a aparecer na fila,
+        // no histórico ou duplicado em nenhuma das duas tabelas.
+        // =====================================================================
+        let ultimaViagemPorPlaca = {};
 
         snapshot.forEach((doc) => {
             const dados = { id: doc.id, ...doc.data() };
-            if (dados.status !== 'Em Viagem' && dados.status !== 'Concluido' && dados.status !== 'Cancelado') {
-                placasAtivas[dados.placa] = dados.timestampChegada;
+            if (!dados.placa) return;
+
+            const chave = dados.placa.toUpperCase();
+            const tsAtual = dados.timestampChegada || 0;
+            const registrado = ultimaViagemPorPlaca[chave];
+
+            if (!registrado || tsAtual > (registrado.timestampChegada || 0)) {
+                ultimaViagemPorPlaca[chave] = dados;
             }
         });
 
-        snapshot.forEach((doc) => {
-            const dados = { id: doc.id, ...doc.data() };
+        let noPatio = [];
+        let emViagem = [];
+
+        Object.values(ultimaViagemPorPlaca).forEach((dados) => {
             if (dados.status === 'Cancelado' || dados.status === 'Concluido') return;
-            if(dados.status === 'Em Viagem') {
-                if (placasAtivas[dados.placa] && placasAtivas[dados.placa] > dados.timestampChegada) return; 
+            if (dados.status === 'Em Viagem') {
                 emViagem.push(dados);
-            } else { 
+            } else {
                 noPatio.push(dados);
             }
         });
