@@ -6,21 +6,21 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-
+    
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Portaria CD84 - Marabá</title>
-
+    <title>Check-in Motorista - Portaria CD84</title>
+    
     <!-- Bibliotecas Firebase Compat (v10.8.0) -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
-
+    
     <!-- Biblioteca Leitor QR Code (html5-qrcode) -->
     <script src="https://unpkg.com/html5-qrcode"></script>
 
     <style>
-        :root { --primary: #0f52ba; --success: #2ecc71; --bg: #f5f6fa; --text: #2c3e50; --border: #dcdde1; --travel: #e67e22; }
-        body { font-family: 'Segoe UI', Arial, sans-serif; background-color: var(--bg); margin: 0; padding: 20px; display: flex; justify-content: center; align-items: flex-start; min-height: 100vh; color: var(--text); }
+        :root { --primary: #0f52ba; --success: #2ecc71; --bg: #f5f6fa; --text: #2c3e50; --border: #dcdde1; }
+        body { font-family: 'Segoe UI', Arial, sans-serif; background-color: var(--bg); margin: 0; padding: 20px; display: flex; justify-content: center; align-items: center; min-height: 100vh; color: var(--text); }
         .container { width: 100%; max-width: 480px; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 5px 20px rgba(0,0,0,0.1); text-align: center; box-sizing: border-box; }
         .hidden { display: none !important; }
         h2 { margin-top: 0; color: var(--primary); font-size: 1.6rem; }
@@ -36,86 +36,49 @@
         #secao-sucesso div.icon { font-size: 6rem; color: var(--success); margin-bottom: 15px; }
         #secao-sucesso h3 { color: var(--success); margin: 0 0 12px 0; font-size: 1.5rem; }
         label { display:block; text-align:left; font-weight:bold; font-size: 0.9rem; color: #5c6b73; }
-
-        /* Abas */
-        .tabs { display: flex; gap: 8px; margin-bottom: 25px; }
-        .tab-btn { flex: 1; margin-top: 0; padding: 12px 8px; font-size: 0.9rem; background-color: #eef1f7; color: var(--text); border-radius: 8px; }
-        .tab-btn.active { background-color: var(--primary); color: white; }
-        .tab-conteudo { display: none; }
-        .tab-conteudo.ativo { display: block; }
-
-        /* Fila (somente leitura) */
-        .fila-item { display: flex; align-items: center; justify-content: space-between; background: #f8f9fa; border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; margin-bottom: 10px; text-align: left; }
-        .fila-item.minha-viagem { background: #e8f0fe; border-color: var(--primary); border-width: 2px; }
-        .fila-pos { font-weight: bold; color: var(--primary); font-size: 1.2rem; min-width: 32px; }
-        .fila-placa { font-weight: bold; font-size: 1.05rem; color: var(--text); }
-        .fila-sub { font-size: 0.8rem; color: #7f8c8d; margin-top: 2px; }
-        .badge { display: inline-block; padding: 4px 10px; border-radius: 20px; font-size: 0.72rem; font-weight: bold; }
-        .status-aguardando { background-color: #ffeaa7; color: #b33939; }
-        .status-em-doca { background-color: #74b9ff; color: #0984e3; }
-        .empty-msg { text-align: center; color: #95a5a6; padding: 20px; font-style: italic; }
-        .aviso-minha-viagem { background: var(--primary); color: white; border-radius: 8px; padding: 12px 16px; margin-bottom: 18px; font-size: 0.9rem; text-align: left; line-height: 1.4; }
-
         @media (max-width: 400px) { .container { padding: 20px; } h2 { font-size: 1.4rem; } input[type="text"] { font-size: 1.3rem; } }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>Portaria Eletrônica</h2>
-    <p class="subtitle">Unidade CD84 - Marabá</p>
+    <h2>Check-in Eletrônico</h2>
+    <p class="subtitle">Portaria Unidade CD84 - Marabá</p>
     <hr>
 
-    <!-- 1. SEÇÃO LOGIN (compartilhada pelas duas abas) -->
+    <!-- 1. SEÇÃO LOGIN -->
     <div id="secao-login">
-        <p style="margin-bottom: 25px; line-height: 1.5;">Para continuar, valide a sua identidade usando a conta de e-mail do seu aparelho celular.</p>
+        <p style="margin-bottom: 25px; line-height: 1.5;">Para iniciar o seu registro de chegada, valide a sua identidade usando a conta de e-mail do seu aparelho celular.</p>
         <button id="btn-login" style="background-color: #4285F4; display: flex; align-items: center; justify-content: center; gap: 10px;">
             <img src="https://upload.wikimedia.org/wikipedia/commons/5/53/Google_%22G%22_Logo.svg" alt="G" style="width:20px; height:20px; background:white; padding:2px; border-radius:50%;">
             Entrar com Conta Google
         </button>
     </div>
 
-    <!-- ÁREA LOGADA -->
-    <div id="area-logada" class="hidden">
+    <!-- 2. SEÇÃO OPERAÇÃO -->
+    <div id="secao-operacao" class="hidden">
         <div class="user-info">
             Identificado como:<br>
             <strong id="user-email">Carregando dados do perfil...</strong>
         </div>
 
-        <!-- Seletor de abas -->
-        <div class="tabs">
-            <button type="button" class="tab-btn active" id="btn-tab-checkin" onclick="mudarAba('checkin')">Confirmar Chegada</button>
-            <button type="button" class="tab-btn" id="btn-tab-fila" onclick="mudarAba('fila')">Acompanhar Fila</button>
+        <div id="bloco-formulario">
+            <label for="placa">DIGITE A PLACA DO VEÍCULO (COM HÍFEN):</label>
+            <input type="text" id="placa" placeholder="AAA-0A00" maxlength="8" autocomplete="off">
+            
+            <p style="text-align: left; font-size: 0.9rem; line-height: 1.5; color: #7f8c8d;">⚠️ <strong>Passo Final:</strong> Após preencher a placa acima, clique no botão para abrir a câmera e escanear o QR Code de segurança da guarita.</p>
+            <button id="btn-abrir-camera">Abrir Câmera e Confirmar</button>
         </div>
 
-        <!-- ABA 1: CONFIRMAR CHEGADA (check-in) -->
-        <div id="tab-checkin" class="tab-conteudo ativo">
+        <!-- CONTAINER DA CÂMERA -->
+        <div id="reader" class="hidden"></div>
+    </div>
 
-            <div id="bloco-formulario">
-                <label for="placa">DIGITE A PLACA DO VEÍCULO (COM HÍFEN):</label>
-                <input type="text" id="placa" placeholder="AAA-0A00" maxlength="8" autocomplete="off">
-
-                <p style="text-align: left; font-size: 0.9rem; line-height: 1.5; color: #7f8c8d;">⚠️ <strong>Passo Final:</strong> Após preencher a placa acima, clique no botão para abrir a câmera e escanear o QR Code de segurança da guarita.</p>
-                <button id="btn-abrir-camera">Abrir Câmera e Confirmar</button>
-            </div>
-
-            <!-- CONTAINER DA CÂMERA -->
-            <div id="reader" class="hidden"></div>
-
-            <!-- SEÇÃO SUCESSO -->
-            <div id="secao-sucesso" class="hidden">
-                <div class="icon">✓</div>
-                <h3>Check-in Realizado!</h3>
-                <p style="line-height: 1.5; color: #7f8c8d;">Sua chegada foi gravada com sucesso. Estacione e aguarde ser chamado na doca pelo painel principal.</p>
-            </div>
-        </div>
-
-        <!-- ABA 2: ACOMPANHAR FILA (somente leitura) -->
-        <div id="tab-fila" class="tab-conteudo">
-            <div id="aviso-minha-viagem" class="aviso-minha-viagem hidden"></div>
-            <div id="listaFila"></div>
-            <div id="msgFilaVazia" class="empty-msg hidden">Nenhum veículo aguardando ou em doca no momento.</div>
-        </div>
+    <!-- 3. SEÇÃO SUCESSO -->
+    <div id="secao-sucesso" class="hidden">
+        <div class="icon">✓</div>
+        <h3>Check-in Realizado!</h3>
+        <p style="line-height: 1.5; color: #7f8c8d;">Sua chegada foi gravada com sucesso. Estacione e aguarde ser chamado na doca pelo painel principal.</p>
     </div>
 </div>
 
@@ -128,13 +91,13 @@
         messagingSenderId: "683256630906",
         appId: "1:683256630906:web:688866abf7f2d00e6eb5c3"
     };
-
+    
     firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
     const db = firebase.firestore();
 
     const secaoLogin = document.getElementById('secao-login');
-    const areaLogada = document.getElementById('area-logada');
+    const secaoOperacao = document.getElementById('secao-operacao');
     const secaoSucesso = document.getElementById('secao-sucesso');
     const blocoFormulario = document.getElementById('bloco-formulario');
     const btnLogin = document.getElementById('btn-login');
@@ -144,26 +107,7 @@
     const placaInput = document.getElementById('placa');
 
     let html5QrCode = null;
-    let listenerFilaAtivo = null;
 
-    // =====================================================================
-    // NAVEGAÇÃO ENTRE ABAS
-    // =====================================================================
-    function mudarAba(nomeAba) {
-        const abas = ['checkin', 'fila'];
-        abas.forEach(a => {
-            document.getElementById('tab-' + a).classList.toggle('ativo', a === nomeAba);
-            document.getElementById('btn-tab-' + a).classList.toggle('active', a === nomeAba);
-        });
-
-        if (nomeAba === 'fila') {
-            iniciarListenerFila();
-        }
-    }
-
-    // =====================================================================
-    // LÓGICA DE CHECK-IN (idêntica ao check-in.html original)
-    // =====================================================================
     function gravarEntradaBanco() {
         db.collection("fila_patio").add({
             placa: placaInput.value.trim().toUpperCase(),
@@ -176,7 +120,7 @@
             orgao: "Portaria CD84"
         })
         .then(() => {
-            blocoFormulario.classList.add('hidden');
+            secaoOperacao.classList.add('hidden');
             secaoSucesso.classList.remove('hidden');
         })
         .catch((error) => {
@@ -188,7 +132,7 @@
     }
 
     function processarLeituraQRCode(textoEscaneado) {
-        const PALAVRA_CHAVE_OFICIAL = "PORTARIA_CD84_VALIDADO";
+        const PALAVRA_CHAVE_OFICIAL = "PORTARIA_CD84_VALIDADO"; 
         if (textoEscaneado.trim() === PALAVRA_CHAVE_OFICIAL) {
             gravarEntradaBanco();
         } else {
@@ -204,13 +148,13 @@
 
         html5QrCode = new Html5Qrcode("reader");
         html5QrCode.start(
-            { facingMode: "environment" },
+            { facingMode: "environment" }, 
             { fps: 15, qrbox: { width: 280, height: 280 }, aspectRatio: 1.0 },
             (decodedText) => {
                 html5QrCode.stop().then(() => {
                     processarLeituraQRCode(decodedText);
                 }).catch(() => {
-                    processarLeituraQRCode(decodedText);
+                    processarLeituraQRCode(decodedText); 
                 });
             },
             (errorMessage) => {}
@@ -241,14 +185,10 @@
         if (user) {
             userEmailSpan.innerText = user.displayName + "\n(" + user.email + ")";
             secaoLogin.classList.add('hidden');
-            areaLogada.classList.remove('hidden');
+            secaoOperacao.classList.remove('hidden');
         } else {
             secaoLogin.classList.remove('hidden');
-            areaLogada.classList.add('hidden');
-            if (listenerFilaAtivo) {
-                listenerFilaAtivo();
-                listenerFilaAtivo = null;
-            }
+            secaoOperacao.classList.add('hidden');
         }
     });
 
@@ -263,31 +203,31 @@
             return;
         }
 
-        // OTIMIZAÇÃO: filtra direto no Firestore só os status ativos,
-        // em vez de baixar a coleção inteira a cada clique.
+        // OTIMIZAÇÃO: antes buscávamos TODA a coleção (histórico completo)
+        // a cada clique. Agora filtramos direto no Firestore, trazendo
+        // somente os documentos com status ativo (Aguardando/Em Doca).
+        // Isso reduz drasticamente o número de leituras cobradas pelo
+        // Firestore, especialmente conforme o histórico de viagens cresce.
+        //
+        // BLOQUEIO REMOVIDO: antes também bloqueávamos um segundo check-in
+        // do mesmo e-mail. Isso foi removido porque um mesmo transportador
+        // pode ter mais de um caminhão e precisar registrar mais de um
+        // veículo com o mesmo login. Continua bloqueado apenas quando a
+        // PLACA já está ativa no pátio (isso sim não pode duplicar).
         db.collection("fila_patio")
           .where("status", "in", ["Aguardando", "Em Doca"])
           .get().then((snapshot) => {
             let placaDuplicada = false;
-            let emailDuplicado = false;
 
             snapshot.forEach((doc) => {
                 const dados = doc.data();
                 if (dados.placa && dados.placa.toUpperCase() === placa) {
                     placaDuplicada = true;
                 }
-                if (dados.email && dados.email.toLowerCase() === emailMotorista) {
-                    emailDuplicado = true;
-                }
             });
 
             if (placaDuplicada) {
                 alert(`🚫 CADASTRO BLOQUEADO!\n\nEste veículo (${placa}) já está registrado pátio.`);
-                return;
-            }
-
-            if (emailDuplicado) {
-                alert("🚫 CADASTRO BLOQUEADO!\n\nSeu e-mail já possui um check-in ativo.");
                 return;
             }
 
@@ -298,80 +238,6 @@
             alert("Erro ao processar dados de antiduplicidade.");
         });
     });
-
-    // =====================================================================
-    // ABA "ACOMPANHAR FILA" — SOMENTE LEITURA
-    // Nenhum botão de ação (chamar doca, liberar, cancelar, editar) fica
-    // exposto aqui. É apenas uma visualização da posição na fila.
-    // =====================================================================
-    function iniciarListenerFila() {
-        if (listenerFilaAtivo) return; // já está escutando, evita duplicar
-
-        const listaFila = document.getElementById('listaFila');
-        const msgFilaVazia = document.getElementById('msgFilaVazia');
-        const avisoMinhaViagem = document.getElementById('aviso-minha-viagem');
-        const meuEmail = (auth.currentUser && auth.currentUser.email) ? auth.currentUser.email.toLowerCase() : "";
-
-        listenerFilaAtivo = db.collection("fila_patio")
-            .where("status", "in", ["Aguardando", "Em Doca"])
-            .onSnapshot((snapshot) => {
-
-                // Mesmo algoritmo do painel: considera apenas a viagem mais
-                // recente de cada placa, evitando qualquer duplicidade.
-                let ultimaViagemPorPlaca = {};
-                snapshot.forEach((doc) => {
-                    const dados = { id: doc.id, ...doc.data() };
-                    if (!dados.placa) return;
-                    const chave = dados.placa.toUpperCase();
-                    const tsAtual = dados.timestampChegada || 0;
-                    const registrado = ultimaViagemPorPlaca[chave];
-                    if (!registrado || tsAtual > (registrado.timestampChegada || 0)) {
-                        ultimaViagemPorPlaca[chave] = dados;
-                    }
-                });
-
-                let fila = Object.values(ultimaViagemPorPlaca);
-                fila.sort((a, b) => a.timestampChegada - b.timestampChegada);
-
-                listaFila.innerHTML = '';
-
-                if (fila.length === 0) {
-                    msgFilaVazia.classList.remove('hidden');
-                } else {
-                    msgFilaVazia.classList.add('hidden');
-                }
-
-                let minhaPosicao = null;
-
-                fila.forEach((v, idx) => {
-                    const ehMinhaViagem = v.email && v.email.toLowerCase() === meuEmail;
-                    if (ehMinhaViagem) minhaPosicao = idx + 1;
-
-                    const item = document.createElement('div');
-                    item.className = 'fila-item' + (ehMinhaViagem ? ' minha-viagem' : '');
-                    item.innerHTML = `
-                        <div style="display:flex; align-items:center; gap:14px;">
-                            <div class="fila-pos">${idx + 1}º</div>
-                            <div>
-                                <div class="fila-placa">${v.placa}</div>
-                                <div class="fila-sub">${v.status === 'Em Doca' ? ('Doca: ' + (v.doca || '-')) : 'Aguardando chamada'}</div>
-                            </div>
-                        </div>
-                        <span class="badge status-${v.status.toLowerCase().replace(/ /g, '-')}">${v.status}</span>
-                    `;
-                    listaFila.appendChild(item);
-                });
-
-                if (minhaPosicao) {
-                    avisoMinhaViagem.classList.remove('hidden');
-                    avisoMinhaViagem.innerText = "🚚 Seu veículo está na " + minhaPosicao + "ª posição da fila.";
-                } else {
-                    avisoMinhaViagem.classList.add('hidden');
-                }
-            }, (error) => {
-                console.error("Erro ao acompanhar a fila: ", error);
-            });
-    }
 </script>
 </body>
 </html>
