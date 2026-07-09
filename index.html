@@ -2,7 +2,6 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <!-- Força o navegador do celular a carregar a versão nova ignorando o cache antigo -->
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
@@ -10,12 +9,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Portaria CD84 - Marabá</title>
 
-    <!-- Bibliotecas Firebase Compat (v10.8.0) -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 
-    <!-- Biblioteca Leitor QR Code (html5-qrcode) -->
     <script src="https://unpkg.com/html5-qrcode"></script>
 
     <style>
@@ -66,7 +63,6 @@
     <p class="subtitle">Unidade CD84 - Marabá</p>
     <hr>
 
-    <!-- 1. SEÇÃO LOGIN (compartilhada pelas duas abas) -->
     <div id="secao-login">
         <p style="margin-bottom: 25px; line-height: 1.5;">Para continuar, valide a sua identidade usando a conta de e-mail do seu aparelho celular.</p>
         <button id="btn-login" style="background-color: #4285F4; display: flex; align-items: center; justify-content: center; gap: 10px;">
@@ -75,20 +71,17 @@
         </button>
     </div>
 
-    <!-- ÁREA LOGADA -->
     <div id="area-logada" class="hidden">
         <div class="user-info">
             Identificado como:<br>
             <strong id="user-email">Carregando dados do perfil...</strong>
         </div>
 
-        <!-- Seletor de abas -->
         <div class="tabs">
             <button type="button" class="tab-btn active" id="btn-tab-checkin" onclick="mudarAba('checkin')">Confirmar Chegada</button>
             <button type="button" class="tab-btn" id="btn-tab-fila" onclick="mudarAba('fila')">Acompanhar Fila</button>
         </div>
 
-        <!-- ABA 1: CONFIRMAR CHEGADA (check-in) -->
         <div id="tab-checkin" class="tab-conteudo ativo">
 
             <div id="bloco-formulario">
@@ -99,10 +92,8 @@
                 <button id="btn-abrir-camera">Abrir Câmera e Confirmar</button>
             </div>
 
-            <!-- CONTAINER DA CÂMERA -->
             <div id="reader" class="hidden"></div>
 
-            <!-- SEÇÃO SUCESSO -->
             <div id="secao-sucesso" class="hidden">
                 <div class="icon">✓</div>
                 <h3>Check-in Realizado!</h3>
@@ -110,7 +101,6 @@
             </div>
         </div>
 
-        <!-- ABA 2: ACOMPANHAR FILA (somente leitura) -->
         <div id="tab-fila" class="tab-conteudo">
             <div id="aviso-minha-viagem" class="aviso-minha-viagem hidden"></div>
             <div id="listaFila"></div>
@@ -254,7 +244,6 @@
 
     btnCamera.addEventListener('click', () => {
         const placa = placaInput.value.trim().toUpperCase();
-        const emailMotorista = auth.currentUser.email.toLowerCase();
 
         const regexPlaca = /^[A-Z]{3}-[0-9][A-Z0-9][0-9]{2}$/;
         if(!regexPlaca.test(placa)) {
@@ -263,31 +252,21 @@
             return;
         }
 
-        // OTIMIZAÇÃO: filtra direto no Firestore só os status ativos,
-        // em vez de baixar a coleção inteira a cada clique.
+        // OTIMIZAÇÃO: filtra direto no Firestore só os status ativos
         db.collection("fila_patio")
           .where("status", "in", ["Aguardando", "Em Doca"])
           .get().then((snapshot) => {
             let placaDuplicada = false;
-            let emailDuplicado = false;
 
             snapshot.forEach((doc) => {
                 const dados = doc.data();
                 if (dados.placa && dados.placa.toUpperCase() === placa) {
                     placaDuplicada = true;
                 }
-                if (dados.email && dados.email.toLowerCase() === emailMotorista) {
-                    emailDuplicado = true;
-                }
             });
 
             if (placaDuplicada) {
-                alert(`🚫 CADASTRO BLOQUEADO!\n\nEste veículo (${placa}) já está registrado pátio.`);
-                return;
-            }
-
-            if (emailDuplicado) {
-                alert("🚫 CADASTRO BLOQUEADO!\n\nSeu e-mail já possui um check-in ativo.");
+                alert(`🚫 CADASTRO BLOQUEADO!\n\nEste veículo (${placa}) já está registrado no pátio.`);
                 return;
             }
 
@@ -301,8 +280,6 @@
 
     // =====================================================================
     // ABA "ACOMPANHAR FILA" — SOMENTE LEITURA
-    // Nenhum botão de ação (chamar doca, liberar, cancelar, editar) fica
-    // exposto aqui. É apenas uma visualização da posição na fila.
     // =====================================================================
     function iniciarListenerFila() {
         if (listenerFilaAtivo) return; // já está escutando, evita duplicar
@@ -316,8 +293,6 @@
             .where("status", "in", ["Aguardando", "Em Doca"])
             .onSnapshot((snapshot) => {
 
-                // Mesmo algoritmo do painel: considera apenas a viagem mais
-                // recente de cada placa, evitando qualquer duplicidade.
                 let ultimaViagemPorPlaca = {};
                 snapshot.forEach((doc) => {
                     const dados = { id: doc.id, ...doc.data() };
