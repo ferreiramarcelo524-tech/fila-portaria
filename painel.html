@@ -23,6 +23,11 @@
         .btn-done { background-color: var(--success); }
         .btn-edit { background-color: var(--warning); color: #2c3e50; }
         .btn-cancel { background-color: var(--danger); }
+        .btn-move { background-color: #7f8c8d; padding: 6px 10px; }
+        .btn-move:disabled { background-color: #dcdde1; cursor: not-allowed; }
+        .btn-add { background-color: var(--success); margin-bottom: 15px; }
+        .card-header-flex { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--bg-primary); padding-bottom: 12px; margin-bottom: 15px; }
+        .card-header-flex h2 { margin: 0; border-bottom: none; padding-bottom: 0; }
         table { width: 100%; border-collapse: collapse; }
         th, td { text-align: left; padding: 12px; border-bottom: 1px solid #eee; }
         th { background-color: #f8f9fa; color: #5c6b73; }
@@ -104,6 +109,7 @@
     const auth = firebase.auth();
 
     let usuarioLogado = null;
+    let listaAguardandoGlobal = [];
 
     auth.onAuthStateChanged((user) => {
         const userEmailTxt = document.getElementById('userEmail');
@@ -187,12 +193,19 @@
         noPatio.sort((a, b) => a.timestampChegada - b.timestampChegada);
         emViagem.sort((a, b) => b.timestampSaida - a.timestampSaida);
 
+        // Lista global usada pelos botões de reordenar (mover para cima/
+        // baixo). Contém apenas os veículos "Aguardando", na mesma ordem
+        // exibida na tela — é contra essa lista que calculamos o vizinho
+        // a trocar de posição.
+        listaAguardandoGlobal = noPatio.filter(v => v.status === 'Aguardando');
+
         tabelaPatio.innerHTML = '';
         if (noPatio.length === 0) {
             msgPatio.style.display = 'block';
         } else {
             msgPatio.style.display = 'none';
-            noPatio.forEach((v, idx) => {
+            let contadorAguardando = 0;
+            noPatio.forEach((v) => {
                 const tr = document.createElement('tr');
                 let btnAcao = v.status === 'Aguardando' ? 
                     `<button class="btn-action btn-call" onclick="chamar('${v.id}')">Chamar Doca</button>` :
@@ -201,8 +214,21 @@
                 let btnEditar = v.status !== 'Aguardando' ? `<button class="btn-action btn-edit" onclick="editarRota('${v.id}', '${v.filial || ''}', '${v.doca || ''}', '${v.conferente || ''}')">Edit Rota</button>` : '';
                 let btnCancelar = `<button class="btn-action btn-cancel" onclick="cancelarChegada('${v.id}', '${v.placa}')">Cancelar</button>`;
 
+                let posicaoTexto = '-';
+                let btnMover = '';
+                if (v.status === 'Aguardando') {
+                    contadorAguardando++;
+                    posicaoTexto = contadorAguardando + 'º';
+                    const idxAguardando = contadorAguardando - 1;
+                    const ehPrimeiro = idxAguardando === 0;
+                    const ehUltimo = idxAguardando === listaAguardandoGlobal.length - 1;
+                    btnMover =
+                        `<button class="btn-action btn-move" onclick="moverParaCima('${v.id}')" ${ehPrimeiro ? 'disabled' : ''} title="Mover para cima na fila">▲</button>` +
+                        `<button class="btn-action btn-move" onclick="moverParaBaixo('${v.id}')" ${ehUltimo ? 'disabled' : ''} title="Mover para baixo na fila">▼</button>`;
+                }
+
                 tr.innerHTML = `
-                    <td><strong>${v.status === 'Aguardando' ? (idx + 1) + 'º' : '-'}</strong></td>
+                    <td><strong>${posicaoTexto}</strong></td>
                     <td><strong style="color:var(--primary); font-size:1.1rem;">${v.placa}</strong></td>
                     <td><strong>${v.filial || '-'}</strong></td>
                     <td>${v.motorista}<br><small style="color:#7f8c8d">${v.email}</small></td>
@@ -210,7 +236,7 @@
                     <td>${new Date(v.timestampChegada).toLocaleTimeString('pt-BR')}</td>
                     <td><span class="badge status-${v.status.toLowerCase().replace(/ /g, '-')}">${v.status}</span></td>
                     <td>${v.status === 'Em Doca' ? `Doca: ${v.doca} (${v.conferente})` : '-'}</td>
-                    <td>${btnAcao}${btnEditar}${btnCancelar}</td>
+                    <td>${btnMover}${btnAcao}${btnEditar}${btnCancelar}</td>
                 `;
                 tabelaPatio.appendChild(tr);
             });
@@ -249,6 +275,44 @@
             db.collection("fila_patio").doc(id).update({ status: "Em Doca", filial: f, doca: d, conferente: c })
             .catch(err => alert("Erro ao salvar: Permissão Negada."));
         }
+    };
+
+    // REORDENAR FILA MANUALMENTE: a posição de cada veículo "Aguardando"
+    // é definida pelo campo timestampChegada (quem tem o menor valor
+    // aparece primeiro). Para mover um veículo, trocamos o
+    // timestampChegada dele com o do vizinho — isso inverte a ordem de
+    // exibição sem precisar criar nenhum campo novo, e continua
+    // compatível com toda a lógica existente (histórico, painel, etc.).
+    window.moverParaCima = (id) => {
+        if(!usuarioLogado) { alert("Acesso negado! Faça o login de administrador primeiro."); return; }
+        const idx = listaAguardandoGlobal.findIndex(v => v.id === id);
+        if (idx <= 0) return;
+
+        const atual = listaAguardandoGlobal[idx];
+        const anterior = listaAguardandoGlobal[idx - 1];
+        const tsAtual = atual.timestampChegada;
+        const tsAnterior = anterior.timestampChegada;
+
+        const batch = db.batch();
+        batch.update(db.collection("fila_patio").doc(atual.id), { timestampChegada: tsAnterior });
+        batch.update(db.collection("fila_patio").doc(anterior.id), { timestampChegada: tsAtual });
+        batch.commit().catch(err => alert("Erro ao reordenar a fila: " + err.message));
+    };
+
+    window.moverParaBaixo = (id) => {
+        if(!usuarioLogado) { alert("Acesso negado! Faça o login de administrador primeiro."); return; }
+        const idx = listaAguardandoGlobal.findIndex(v => v.id === id);
+        if (idx === -1 || idx >= listaAguardandoGlobal.length - 1) return;
+
+        const atual = listaAguardandoGlobal[idx];
+        const proximo = listaAguardandoGlobal[idx + 1];
+        const tsAtual = atual.timestampChegada;
+        const tsProximo = proximo.timestampChegada;
+
+        const batch = db.batch();
+        batch.update(db.collection("fila_patio").doc(atual.id), { timestampChegada: tsProximo });
+        batch.update(db.collection("fila_patio").doc(proximo.id), { timestampChegada: tsAtual });
+        batch.commit().catch(err => alert("Erro ao reordenar a fila: " + err.message));
     };
 
     window.liberar = (id) => {
