@@ -172,7 +172,8 @@
     // =====================================================================
     const CD84_LAT = -5.3499439;
     const CD84_LON = -49.0866814;
-    const RAIO_PERMITIDO_METROS = 500;
+    const RAIO_PERMITIDO_METROS = 150; // reduzido temporariamente para teste mais rigoroso
+    const PRECISAO_MAXIMA_ACEITA_METROS = 150; // se o GPS não tiver essa precisão, bloqueia e pede nova tentativa
 
     function calcularDistanciaMetros(lat1, lon1, lat2, lon2) {
         const R = 6371000; // raio médio da Terra em metros
@@ -200,8 +201,20 @@
                     CD84_LAT,
                     CD84_LON
                 );
+                const precisao = posicao.coords.accuracy; // margem de erro do GPS, em metros
 
-                console.log("Distância até o CD84: " + Math.round(distancia) + " metros");
+                console.log("Localização detectada: " + posicao.coords.latitude + ", " + posicao.coords.longitude);
+                console.log("Distância até o CD84: " + Math.round(distancia) + " metros | Precisão do GPS: ±" + Math.round(precisao) + "m");
+
+                // DIAGNÓSTICO: mostra os números na tela (não só no console),
+                // para facilitar o teste direto pelo celular sem precisar
+                // abrir o DevTools. Pode remover este alert depois de validar.
+                alert("🔍 DIAGNÓSTICO DE LOCALIZAÇÃO\n\nDistância até o CD84: " + Math.round(distancia) + "m\nPrecisão do GPS: ±" + Math.round(precisao) + "m\nLimite permitido: " + RAIO_PERMITIDO_METROS + "m");
+
+                if (precisao > PRECISAO_MAXIMA_ACEITA_METROS) {
+                    alert("🚫 SINAL DE GPS FRACO!\n\nA precisão da sua localização está muito baixa (±" + Math.round(precisao) + "m). Vá para uma área aberta, aguarde alguns segundos e tente novamente.");
+                    return;
+                }
 
                 if (distancia > RAIO_PERMITIDO_METROS) {
                     alert("🚫 CHECK-IN BLOQUEADO!\n\nVocê precisa estar dentro das dependências do CD84 para confirmar a chegada.\n\nDistância atual: " + Math.round(distancia) + "m (limite permitido: " + RAIO_PERMITIDO_METROS + "m).");
