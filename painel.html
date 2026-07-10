@@ -53,7 +53,10 @@
     </header>
 
     <section class="card">
-        <h2>Fila de Espera / Operação Atual</h2>
+        <div class="card-header-flex">
+            <h2>Fila de Espera / Operação Atual</h2>
+            <button class="btn-action btn-add" onclick="adicionarVeiculoManual()">+ Adicionar Veículo</button>
+        </div>
         <table>
             <thead>
                 <tr>
@@ -265,6 +268,60 @@
             });
         }
     });
+
+    // ADICIONAR VEÍCULO MANUALMENTE PELO PAINEL (sem passar pelo check-in
+    // do motorista). Útil para casos excepcionais (ex: motorista sem
+    // celular/QR Code no momento). Segue a mesma checagem de duplicidade
+    // por placa usada no check-in.
+    window.adicionarVeiculoManual = () => {
+        if(!usuarioLogado) { alert("Acesso negado! Faça o login de administrador primeiro."); return; }
+
+        const placaInformada = prompt("Placa do veículo (formato AAA-0A00):");
+        if (!placaInformada) return;
+        const placa = placaInformada.trim().toUpperCase();
+
+        const regexPlaca = /^[A-Z]{3}-[0-9][A-Z0-9][0-9]{2}$/;
+        if (!regexPlaca.test(placa)) {
+            alert("🚫 FORMATO DE PLACA INVÁLIDO!\n\nExemplo correto: AAA-0A00");
+            return;
+        }
+
+        const motorista = prompt("Nome do motorista:");
+        if (!motorista) return;
+
+        const emailMotorista = (prompt("E-mail do motorista (opcional, pode deixar em branco):") || "").trim().toLowerCase();
+
+        db.collection("fila_patio")
+          .where("status", "in", ["Aguardando", "Em Doca"])
+          .get().then((snapshot) => {
+            let placaDuplicada = false;
+            snapshot.forEach((doc) => {
+                const dados = doc.data();
+                if (dados.placa && dados.placa.toUpperCase() === placa) {
+                    placaDuplicada = true;
+                }
+            });
+
+            if (placaDuplicada) {
+                alert(`🚫 Este veículo (${placa}) já está registrado no pátio.`);
+                return;
+            }
+
+            db.collection("fila_patio").add({
+                placa: placa,
+                motorista: motorista,
+                email: emailMotorista,
+                timestampChegada: Date.now(),
+                status: "Aguardando",
+                doca: "-",
+                conferente: "-",
+                orgao: "Portaria CD84 (Cadastro Manual - Admin)"
+            }).then(() => {
+                alert("Veículo adicionado à fila com sucesso.");
+            }).catch(err => alert("Erro ao adicionar veículo: " + err.message));
+
+          }).catch(err => alert("Erro ao validar duplicidade: " + err.message));
+    };
 
     window.chamar = (id) => {
         if(!usuarioLogado) { alert("Acesso negado! Faça o login de administrador primeiro."); return; }
