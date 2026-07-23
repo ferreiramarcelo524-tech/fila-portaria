@@ -10,10 +10,24 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Portaria CD84 - Marabá</title>
 
+    <!-- ÍCONES DO ATALHO / APP (Android + iPhone) -->
+    <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="favicon-16.png">
+    <link rel="apple-touch-icon" href="apple-touch-icon.png">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0f52ba">
+
+    <!-- Faz o atalho abrir em tela cheia (sem barra de endereço) no iPhone -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="CD84">
+    <meta name="mobile-web-app-capable" content="yes">
+
     <!-- Bibliotecas Firebase Compat (v10.8.0) -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging-compat.js"></script>
 
     <!-- Biblioteca Leitor QR Code (html5-qrcode) -->
     <script src="https://unpkg.com/html5-qrcode"></script>
@@ -313,11 +327,60 @@
         });
     });
 
+    // =====================================================================
+    // NOTIFICAÇÃO PUSH (Firebase Cloud Messaging)
+    // Pede permissão de notificação ao motorista uma vez, após o login, e
+    // salva o token do aparelho numa coleção separada (tokens_notificacao),
+    // sem alterar em nada a estrutura do documento de check-in
+    // (fila_patio). O envio em si é feito pelo Apps Script (Code.gs).
+    // =====================================================================
+    const VAPID_KEY = "BCOAMVhfSIuL6GzP9U690nI0-Vi1rkSivZW9qq0kfSD6q9hP9_U_Ltx_nq19t-DsXWXu8gZZ0IoHZZq-bePEF-k";
+    let mensageria = null;
+    try {
+        mensageria = firebase.messaging();
+    } catch (e) {
+        console.error("Firebase Messaging não suportado neste navegador: ", e);
+    }
+
+    function solicitarPermissaoNotificacao(emailUsuario) {
+        if (!mensageria || !('Notification' in window) || !('serviceWorker' in navigator)) {
+            console.log("Este navegador não suporta notificações push.");
+            return;
+        }
+
+        navigator.serviceWorker.register('firebase-messaging-sw.js').then((registration) => {
+            Notification.requestPermission().then((permissao) => {
+                if (permissao !== 'granted') {
+                    console.log("Permissão de notificação negada pelo motorista.");
+                    return;
+                }
+
+                mensageria.getToken({ vapidKey: VAPID_KEY, serviceWorkerRegistration: registration })
+                    .then((token) => {
+                        if (!token) return;
+                        db.collection("tokens_notificacao").doc(emailUsuario).set({
+                            email: emailUsuario,
+                            token: token,
+                            atualizadoEm: Date.now()
+                        }, { merge: true }).catch((err) => {
+                            console.error("Erro ao salvar token de notificação: ", err);
+                        });
+                    })
+                    .catch((err) => {
+                        console.error("Erro ao obter token de notificação: ", err);
+                    });
+            });
+        }).catch((err) => {
+            console.error("Erro ao registrar Service Worker de notificação: ", err);
+        });
+    }
+
     auth.onAuthStateChanged((user) => {
         if (user) {
             userEmailSpan.innerText = user.displayName + "\n(" + user.email + ")";
             secaoLogin.classList.add('hidden');
             areaLogada.classList.remove('hidden');
+            solicitarPermissaoNotificacao(user.email.toLowerCase());
         } else {
             secaoLogin.classList.remove('hidden');
             areaLogada.classList.add('hidden');
