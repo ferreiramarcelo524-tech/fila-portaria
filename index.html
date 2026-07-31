@@ -541,16 +541,34 @@
         const listaHistorico = document.getElementById('listaHistorico');
         const msgHistoricoVazio = document.getElementById('msgHistoricoVazio');
 
+        // IMPORTANTE: consultamos os três status ativos (não só "Em Viagem"),
+        // pelo mesmo motivo do painel: precisamos saber se já existe uma
+        // viagem MAIS NOVA daquela placa (ex: um novo check-in "Aguardando")
+        // para então excluir a viagem antiga do histórico. Só assim uma
+        // viagem some da lista assim que o veículo volta a dar entrada.
         listenerHistoricoAtivo = db.collection("fila_patio")
-            .where("status", "==", "Em Viagem")
+            .where("status", "in", ["Aguardando", "Em Doca", "Em Viagem"])
             .onSnapshot((snapshot) => {
 
-                let viagens = [];
+                // Mesmo algoritmo do painel: considera apenas o documento
+                // mais recente (maior timestampChegada) de cada placa.
+                let ultimaViagemPorPlaca = {};
                 snapshot.forEach((doc) => {
                     const dados = doc.data();
                     if (!dados.placa) return;
-                    viagens.push(dados);
+                    const chave = dados.placa.toUpperCase();
+                    const tsAtual = dados.timestampChegada || 0;
+                    const registrado = ultimaViagemPorPlaca[chave];
+                    if (!registrado || tsAtual > (registrado.timestampChegada || 0)) {
+                        ultimaViagemPorPlaca[chave] = dados;
+                    }
                 });
+
+                // Do conjunto de "últimas viagens", exibimos só as que
+                // estão atualmente "Em Viagem". Se a viagem mais recente
+                // daquela placa já for um novo "Aguardando"/"Em Doca", a
+                // viagem antiga simplesmente não aparece mais aqui.
+                let viagens = Object.values(ultimaViagemPorPlaca).filter(v => v.status === 'Em Viagem');
 
                 viagens.sort((a, b) => (b.timestampSaida || 0) - (a.timestampSaida || 0));
 
