@@ -100,6 +100,7 @@
         <div class="tabs">
             <button type="button" class="tab-btn active" id="btn-tab-checkin" onclick="mudarAba('checkin')">Confirmar Chegada</button>
             <button type="button" class="tab-btn" id="btn-tab-fila" onclick="mudarAba('fila')">Acompanhar Fila</button>
+            <button type="button" class="tab-btn" id="btn-tab-historico" onclick="mudarAba('historico')">Histórico de Saída</button>
         </div>
 
         <!-- ABA 1: CONFIRMAR CHEGADA (check-in) -->
@@ -130,6 +131,12 @@
             <div id="listaFila"></div>
             <div id="msgFilaVazia" class="empty-msg hidden">Nenhum veículo aguardando ou em doca no momento.</div>
         </div>
+
+        <!-- ABA 3: HISTÓRICO DE SAÍDA (somente leitura, sem dados pessoais) -->
+        <div id="tab-historico" class="tab-conteudo">
+            <div id="listaHistorico"></div>
+            <div id="msgHistoricoVazio" class="empty-msg hidden">Nenhum veículo saiu em viagem hoje.</div>
+        </div>
     </div>
 </div>
 
@@ -159,12 +166,13 @@
 
     let html5QrCode = null;
     let listenerFilaAtivo = null;
+    let listenerHistoricoAtivo = null;
 
     // =====================================================================
     // NAVEGAÇÃO ENTRE ABAS
     // =====================================================================
     function mudarAba(nomeAba) {
-        const abas = ['checkin', 'fila'];
+        const abas = ['checkin', 'fila', 'historico'];
         abas.forEach(a => {
             document.getElementById('tab-' + a).classList.toggle('ativo', a === nomeAba);
             document.getElementById('btn-tab-' + a).classList.toggle('active', a === nomeAba);
@@ -172,6 +180,9 @@
 
         if (nomeAba === 'fila') {
             iniciarListenerFila();
+        }
+        if (nomeAba === 'historico') {
+            iniciarListenerHistorico();
         }
     }
 
@@ -388,6 +399,10 @@
                 listenerFilaAtivo();
                 listenerFilaAtivo = null;
             }
+            if (listenerHistoricoAtivo) {
+                listenerHistoricoAtivo();
+                listenerHistoricoAtivo = null;
+            }
         }
     });
 
@@ -511,6 +526,64 @@
                 }
             }, (error) => {
                 console.error("Erro ao acompanhar a fila: ", error);
+            });
+    }
+
+    // =====================================================================
+    // ABA "HISTÓRICO DE SAÍDA" — SOMENTE LEITURA, SEM DADOS PESSOAIS
+    // Mostra apenas placa, filial, status e horário de saída dos veículos
+    // "Em Viagem". Não exibe nome nem e-mail do motorista, para não
+    // expor dados pessoais de terceiros a quem estiver acompanhando.
+    // =====================================================================
+    function iniciarListenerHistorico() {
+        if (listenerHistoricoAtivo) return; // já está escutando, evita duplicar
+
+        const listaHistorico = document.getElementById('listaHistorico');
+        const msgHistoricoVazio = document.getElementById('msgHistoricoVazio');
+
+        listenerHistoricoAtivo = db.collection("fila_patio")
+            .where("status", "==", "Em Viagem")
+            .onSnapshot((snapshot) => {
+
+                let viagens = [];
+                snapshot.forEach((doc) => {
+                    const dados = doc.data();
+                    if (!dados.placa) return;
+                    viagens.push(dados);
+                });
+
+                viagens.sort((a, b) => (b.timestampSaida || 0) - (a.timestampSaida || 0));
+
+                listaHistorico.innerHTML = '';
+
+                if (viagens.length === 0) {
+                    msgHistoricoVazio.classList.remove('hidden');
+                } else {
+                    msgHistoricoVazio.classList.add('hidden');
+                }
+
+                viagens.forEach((v) => {
+                    const item = document.createElement('div');
+                    item.className = 'fila-item';
+
+                    const dataSaida = v.timestampSaida ? new Date(v.timestampSaida) : null;
+                    const dataTexto = dataSaida
+                        ? (dataSaida.toLocaleDateString('pt-BR') + ' às ' + dataSaida.toLocaleTimeString('pt-BR'))
+                        : '-';
+
+                    item.innerHTML = `
+                        <div style="display:flex; align-items:center; gap:14px;">
+                            <div>
+                                <div class="fila-placa">${v.placa}</div>
+                                <div class="fila-sub">${v.filial || '-'} · Saída: ${dataTexto}</div>
+                            </div>
+                        </div>
+                        <span class="badge" style="background-color:#ffe8d6; color:var(--travel);">Em Viagem</span>
+                    `;
+                    listaHistorico.appendChild(item);
+                });
+            }, (error) => {
+                console.error("Erro ao acompanhar histórico de saída: ", error);
             });
     }
 </script>
