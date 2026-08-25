@@ -49,6 +49,7 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:12px;bor
 
     <div class="tabs">
         <button type="button" class="tab-btn active" id="btn-tab-operacao" onclick="mudarAbaPainel('operacao')">Operação</button>
+        <button type="button" class="tab-btn" id="btn-tab-doca" onclick="mudarAbaPainel('doca')">Doca</button>
         <button type="button" class="tab-btn" id="btn-tab-estatisticas" onclick="mudarAbaPainel('estatisticas')">Estatísticas</button>
         <button type="button" class="tab-btn" id="btn-tab-financeiro" onclick="mudarAbaPainel('financeiro')">Financeiro</button>
     </div>
@@ -96,6 +97,26 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:12px;bor
                 <tbody id="tabelaViagemCorpo"></tbody>
             </table>
             <div id="msgViagemVazio" class="empty-msg">Nenhum veículo saiu em viagem hoje.</div>
+        </section>
+    </div>
+
+    <div id="tab-doca" class="tab-conteudo">
+        <section class="card">
+            <h2>Veículos em Doca</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Placa</th>
+                        <th>Filial Destino</th>
+                        <th>Motorista / E-mail</th>
+                        <th>Doca</th>
+                        <th>Conferente</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="tabelaDocaCorpo"></tbody>
+            </table>
+            <div id="msgDocaVazio" class="empty-msg">Nenhum veículo em doca no momento.</div>
         </section>
     </div>
 
@@ -171,7 +192,7 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:12px;bor
 
     // Controla qual aba está ativa e evita recarregar estatísticas à toa
     function mudarAbaPainel(nomeAba) {
-        const abas = ['operacao', 'estatisticas', 'financeiro'];
+        const abas = ['operacao', 'doca', 'estatisticas', 'financeiro'];
         abas.forEach(a => {
             document.getElementById('tab-' + a).classList.toggle('ativo', a === nomeAba);
             document.getElementById('btn-tab-' + a).classList.toggle('active', a === nomeAba);
@@ -205,10 +226,6 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:12px;bor
     function carregarEstatisticas() {
         const inicioTimestamp = calcularInicioPeriodo(periodoEstatisticasAtual);
 
-        // Consulta por um único campo (timestampSaida), sem precisar de
-        // índice composto: só documentos que JÁ saíram (Em Viagem ou
-        // Concluido) possuem esse campo, então a consulta já filtra
-        // naturalmente carregamentos que realmente aconteceram.
         db.collection("fila_patio")
           .where("timestampSaida", ">=", inicioTimestamp)
           .get()
@@ -216,7 +233,7 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:12px;bor
             const carregamentos = [];
             snapshot.forEach((doc) => {
                 const dados = doc.data();
-                if (dados.status === 'Cancelado') return; // segurança extra
+                if (dados.status === 'Cancelado') return;
                 carregamentos.push(dados);
             });
 
@@ -229,10 +246,8 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:12px;bor
     }
 
     function renderizarEstatisticas(carregamentos) {
-        // 1) Total
         document.getElementById('statTotalCarregamentos').innerText = carregamentos.length;
 
-        // 2) Tempo médio de permanência no pátio
         let somaTempos = 0;
         let contagemValidos = 0;
         carregamentos.forEach(c => {
@@ -250,7 +265,6 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:12px;bor
             document.getElementById('statTempoMedio').innerText = "-";
         }
 
-        // 3) Carregamentos por dia (gráfico de barras)
         let porDia = {};
         carregamentos.forEach(c => {
             if (!c.timestampSaida) return;
@@ -283,7 +297,6 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:12px;bor
             graficoDiv.innerHTML = '<div class="empty-msg" style="width:100%;">Nenhum carregamento no período selecionado.</div>';
         }
 
-        // 4) Por filial
         let porFilial = {};
         carregamentos.forEach(c => {
             const filial = c.filial || '-';
@@ -304,7 +317,6 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:12px;bor
             });
         }
 
-        // 5) Ranking por conferente
         let porConferente = {};
         carregamentos.forEach(c => {
             const conferente = c.conferente && c.conferente !== '-' ? c.conferente : null;
@@ -360,12 +372,6 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:12px;bor
         }
     }
 
-    // OTIMIZAÇÃO: documentos com status "Concluido" ou "Cancelado" nunca
-    // são exibidos no painel. Antes, o listener baixava a coleção inteira
-    // (incluindo todo o histórico finalizado) a cada conexão/reconexão.
-    // Agora filtramos direto no Firestore, trazendo somente os status que
-    // realmente aparecem na tela. Isso reduz as leituras cobradas
-    // conforme o histórico de viagens cresce ao longo do tempo.
     db.collection("fila_patio")
       .where("status", "in", ["Aguardando", "Em Doca", "Em Viagem"])
       .onSnapshot((snapshot) => {
@@ -373,15 +379,9 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:12px;bor
         const msgPatio = document.getElementById('msgPatioVazio');
         const tabelaViagem = document.getElementById('tabelaViagemCorpo');
         const msgViagem = document.getElementById('msgViagemVazio');
+        const tabelaDoca = document.getElementById('tabelaDocaCorpo');
+        const msgDoca = document.getElementById('msgDocaVazio');
 
-        // =====================================================================
-        // ALGORITMO: considerar apenas a viagem MAIS RECENTE de cada placa.
-        // Uma única passagem (O(n)) monta um mapa placa -> documento mais
-        // recente (maior timestampChegada). Qualquer documento antigo da
-        // mesma placa (Concluido, Cancelado, Em Viagem antiga, etc.) é
-        // automaticamente descartado e NUNCA volta a aparecer na fila,
-        // no histórico ou duplicado em nenhuma das duas tabelas.
-        // =====================================================================
         let ultimaViagemPorPlaca = {};
 
         snapshot.forEach((doc) => {
@@ -412,10 +412,6 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:12px;bor
         noPatio.sort((a, b) => a.timestampChegada - b.timestampChegada);
         emViagem.sort((a, b) => b.timestampSaida - a.timestampSaida);
 
-        // Lista global usada pelos botões de reordenar (mover para cima/
-        // baixo). Contém apenas os veículos "Aguardando", na mesma ordem
-        // exibida na tela — é contra essa lista que calculamos o vizinho
-        // a trocar de posição.
         listaAguardandoGlobal = noPatio.filter(v => v.status === 'Aguardando');
 
         tabelaPatio.innerHTML = '';
@@ -483,12 +479,34 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:12px;bor
                 tabelaViagem.appendChild(tr);
             });
         }
+
+        // ===== ABA "DOCA": mesmos dados de noPatio, filtrados por status
+        // "Em Doca". Não gera nenhuma leitura extra no Firestore, pois
+        // reaproveita o snapshot que já foi buscado acima. =====
+        const veiculosEmDoca = noPatio.filter(v => v.status === 'Em Doca');
+        tabelaDoca.innerHTML = '';
+        if (veiculosEmDoca.length === 0) {
+            msgDoca.style.display = 'block';
+        } else {
+            msgDoca.style.display = 'none';
+            veiculosEmDoca.forEach((v) => {
+                const tr = document.createElement('tr');
+                let btnDevolver = `<button class="btn-action btn-move" onclick="devolverParaFila('${v.id}', '${v.placa}')">Devolver para Fila</button>`;
+                let btnLiberarDoca = `<button class="btn-action btn-done" onclick="liberar('${v.id}')">Liberar para Viagem</button>`;
+
+                tr.innerHTML = `
+                    <td><strong style="color:var(--primary); font-size:1.1rem;">${v.placa}</strong></td>
+                    <td><strong>${v.filial || '-'}</strong></td>
+                    <td>${v.motorista}<br><small style="color:#7f8c8d">${v.email}</small></td>
+                    <td>${v.doca || '-'}</td>
+                    <td>${v.conferente || '-'}</td>
+                    <td>${btnLiberarDoca}${btnDevolver}</td>
+                `;
+                tabelaDoca.appendChild(tr);
+            });
+        }
     });
 
-    // ADICIONAR VEÍCULO MANUALMENTE PELO PAINEL (sem passar pelo check-in
-    // do motorista). Útil para casos excepcionais (ex: motorista sem
-    // celular/QR Code no momento). Segue a mesma checagem de duplicidade
-    // por placa usada no check-in.
     window.adicionarVeiculoManual = () => {
         if(!usuarioLogado) { alert("Acesso negado! Faça o login de administrador primeiro."); return; }
 
@@ -539,6 +557,22 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:12px;bor
           }).catch(err => alert("Erro ao validar duplicidade: " + err.message));
     };
 
+    // DEVOLVER PARA FILA: limpa filial/doca/conferente e volta o status
+    // para "Aguardando" — como o timestampChegada NUNCA é alterado (nem
+    // aqui, nem em chamar()), o veículo volta sozinho para a mesma
+    // posição relativa que ocupava antes de ser chamado para a doca.
+    window.devolverParaFila = (id, placa) => {
+        if(!usuarioLogado) { alert("Acesso negado! Faça o login de administrador primeiro."); return; }
+        if (confirm(`Devolver o veículo ${placa} para a fila de espera? Os dados de doca/filial/conferente serão apagados.`)) {
+            db.collection("fila_patio").doc(id).update({
+                status: "Aguardando",
+                filial: "-",
+                doca: "-",
+                conferente: "-"
+            }).catch(err => alert("Erro ao devolver para fila: " + err.message));
+        }
+    };
+
     window.chamar = (id) => {
         if(!usuarioLogado) { alert("Acesso negado! Faça o login de administrador primeiro."); return; }
         const f = prompt("Para qual Filial o veículo vai?");
@@ -550,12 +584,6 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:12px;bor
         }
     };
 
-    // REORDENAR FILA MANUALMENTE: a posição de cada veículo "Aguardando"
-    // é definida pelo campo timestampChegada (quem tem o menor valor
-    // aparece primeiro). Para mover um veículo, trocamos o
-    // timestampChegada dele com o do vizinho — isso inverte a ordem de
-    // exibição sem precisar criar nenhum campo novo, e continua
-    // compatível com toda a lógica existente (histórico, painel, etc.).
     window.moverParaCima = (id) => {
         if(!usuarioLogado) { alert("Acesso negado! Faça o login de administrador primeiro."); return; }
         const idx = listaAguardandoGlobal.findIndex(v => v.id === id);
@@ -621,7 +649,6 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:12px;bor
         }
     };
 
-    // NOVA FUNÇÃO: CONCLUIR VIAGEM (TIRA DO HISTÓRICO DA TELA)
     window.concluirViagem = (id, placa) => {
         if(!usuarioLogado) { alert("Acesso negado! Faça o login de administrador primeiro."); return; }
         if (confirm(`Deseja finalizar e concluir o processo da placa ${placa}?`)) {
