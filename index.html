@@ -178,6 +178,8 @@ label{display:block;text-align:left;font-weight:800;font-size:.9rem;color:#4d607
    <div class="tabs">
      <button type="button" class="tab-btn active" id="btn-tab-checkin" onclick="mudarAba('checkin')">Confirmar Chegada</button>
      <button type="button" class="tab-btn" id="btn-tab-fila" onclick="mudarAba('fila')">Acompanhar Fila</button>
+     <button type="button" class="tab-btn" id="btn-tab-doca" onclick="mudarAba('doca')">Doca</button>
+     <button type="button" class="tab-btn" id="btn-tab-loja" onclick="mudarAba('loja')">Loja</button>
      <button type="button" class="tab-btn" id="btn-tab-historico" onclick="mudarAba('historico')">Histórico de Saída</button>
    </div>
 
@@ -205,7 +207,17 @@ label{display:block;text-align:left;font-weight:800;font-size:.9rem;color:#4d607
    <div id="tab-fila" class="tab-conteudo">
      <div id="aviso-minha-viagem" class="aviso-minha-viagem hidden"></div>
      <div id="listaFila"></div>
-     <div id="msgFilaVazia" class="empty-msg hidden">Nenhum veículo aguardando ou em doca no momento.</div>
+     <div id="msgFilaVazia" class="empty-msg hidden">Nenhum veículo aguardando no momento.</div>
+   </div>
+
+   <div id="tab-doca" class="tab-conteudo">
+     <div id="listaDoca"></div>
+     <div id="msgDocaVazio" class="empty-msg hidden">Nenhum veículo em doca no momento.</div>
+   </div>
+
+   <div id="tab-loja" class="tab-conteudo">
+     <div id="listaLoja"></div>
+     <div id="msgLojaVazio" class="empty-msg hidden">Nenhum veículo em doca no momento.</div>
    </div>
 
    <div id="tab-historico" class="tab-conteudo">
@@ -237,13 +249,14 @@ const readerDiv=document.getElementById('reader');
 const userEmailSpan=document.getElementById('user-email');
 const placaInput=document.getElementById('placa');
 let html5QrCode=null,listenerFilaAtivo=null,listenerHistoricoAtivo=null;
+const ADMIN_EMAIL="ferreiramarcelo524@gmail.com";
 
 function mudarAba(nomeAba){
- ['checkin','fila','historico'].forEach(a=>{
+ ['checkin','fila','doca','loja','historico'].forEach(a=>{
   document.getElementById('tab-'+a).classList.toggle('ativo',a===nomeAba);
   document.getElementById('btn-tab-'+a).classList.toggle('active',a===nomeAba);
  });
- if(nomeAba==='fila')iniciarListenerFila();
+ if(nomeAba==='fila'||nomeAba==='doca'||nomeAba==='loja')iniciarListenerFila();
  if(nomeAba==='historico')iniciarListenerHistorico();
 }
 
@@ -386,7 +399,11 @@ function iniciarListenerFila(){
  if(listenerFilaAtivo)return;
  const listaFila=document.getElementById('listaFila'),msgFilaVazia=document.getElementById('msgFilaVazia');
  const avisoMinhaViagem=document.getElementById('aviso-minha-viagem');
+ const listaDoca=document.getElementById('listaDoca'),msgDocaVazio=document.getElementById('msgDocaVazio');
+ const listaLoja=document.getElementById('listaLoja'),msgLojaVazio=document.getElementById('msgLojaVazio');
  const meuEmail=(auth.currentUser&&auth.currentUser.email)?auth.currentUser.email.toLowerCase():"";
+ const souAdmin=meuEmail===ADMIN_EMAIL;
+
  listenerFilaAtivo=db.collection("fila_patio").where("status","in",["Aguardando","Em Doca"]).onSnapshot(snapshot=>{
   let ultimaViagemPorPlaca={};
   snapshot.forEach(doc=>{
@@ -395,8 +412,13 @@ function iniciarListenerFila(){
    const chave=dados.placa.toUpperCase(),tsAtual=dados.timestampChegada||0,registrado=ultimaViagemPorPlaca[chave];
    if(!registrado||tsAtual>(registrado.timestampChegada||0))ultimaViagemPorPlaca[chave]=dados;
   });
-  let fila=Object.values(ultimaViagemPorPlaca);
+
+  // ===== ABA "ACOMPANHAR FILA": somente quem está Aguardando. Assim que
+  // um veículo é chamado para a doca, ele sai automaticamente daqui (a
+  // posição de quem ficou aguardando é recalculada sozinha). =====
+  let fila=Object.values(ultimaViagemPorPlaca).filter(v=>v.status==='Aguardando');
   fila.sort((a,b)=>a.timestampChegada-b.timestampChegada);
+
   listaFila.innerHTML='';
   if(fila.length===0)msgFilaVazia.classList.remove('hidden');else msgFilaVazia.classList.add('hidden');
   let minhaPosicao=null;
@@ -408,13 +430,57 @@ function iniciarListenerFila(){
    item.innerHTML=`
     <div style="display:flex;align-items:center;gap:14px">
      <div class="fila-pos">${idx+1}º</div><div><div class="fila-placa">${v.placa}</div>
-     <div class="fila-sub">${v.status==='Em Doca'?('Doca: '+(v.doca||'-')):'Aguardando chamada'}</div></div>
+     <div class="fila-sub">Aguardando chamada</div></div>
     </div>
-    <span class="badge status-${v.status.toLowerCase().replace(/ /g,'-')}">${v.status}</span>`;
+    <span class="badge status-aguardando">Aguardando</span>`;
    listaFila.appendChild(item);
   });
   if(minhaPosicao){avisoMinhaViagem.classList.remove('hidden');avisoMinhaViagem.innerText="🚚 Seu veículo está na "+minhaPosicao+"ª posição da fila."}
   else avisoMinhaViagem.classList.add('hidden');
+
+  // ===== ABAS "DOCA" e "LOJA": só veículos Em Doca. Visibilidade: o
+  // motorista só vê o PRÓPRIO veículo; o e-mail admin vê todos. =====
+  let veiculosDoca=Object.values(ultimaViagemPorPlaca).filter(v=>v.status==='Em Doca');
+  let veiculosVisiveis=souAdmin?veiculosDoca:veiculosDoca.filter(v=>v.email&&v.email.toLowerCase()===meuEmail);
+  veiculosVisiveis.sort((a,b)=>(a.timestampChegada||0)-(b.timestampChegada||0));
+
+  listaDoca.innerHTML='';
+  if(veiculosVisiveis.length===0){
+   msgDocaVazio.classList.remove('hidden');
+   msgDocaVazio.innerText=souAdmin?'Nenhum veículo em doca no momento.':'Seu veículo ainda não foi chamado para a doca.';
+  }else{
+   msgDocaVazio.classList.add('hidden');
+   veiculosVisiveis.forEach(v=>{
+    const item=document.createElement('div');
+    item.className='fila-item minha-viagem';
+    item.innerHTML=`
+     <div style="display:flex;align-items:center;gap:14px"><div>
+      <div class="fila-placa">${v.placa}</div>
+      <div class="fila-sub">Doca: ${v.doca||'-'}${souAdmin?(' · '+(v.motorista||'')):''}</div>
+     </div></div>
+     <span class="badge status-em-doca">Em Doca</span>`;
+    listaDoca.appendChild(item);
+   });
+  }
+
+  listaLoja.innerHTML='';
+  if(veiculosVisiveis.length===0){
+   msgLojaVazio.classList.remove('hidden');
+   msgLojaVazio.innerText=souAdmin?'Nenhum veículo em doca no momento.':'Seu veículo ainda não foi chamado para a doca.';
+  }else{
+   msgLojaVazio.classList.add('hidden');
+   veiculosVisiveis.forEach(v=>{
+    const item=document.createElement('div');
+    item.className='fila-item minha-viagem';
+    item.innerHTML=`
+     <div style="display:flex;align-items:center;gap:14px"><div>
+      <div class="fila-placa">${v.placa}</div>
+      <div class="fila-sub">Carregando para: <strong>${v.filial||'-'}</strong>${souAdmin?(' · Doca '+(v.doca||'-')):''}</div>
+     </div></div>
+     <span class="badge status-em-doca">Em Doca</span>`;
+    listaLoja.appendChild(item);
+   });
+  }
  },error=>console.error("Erro ao acompanhar a fila:",error));
 }
 
