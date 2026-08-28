@@ -173,6 +173,26 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:12px;bor
         </section>
 
         <section class="card" style="margin-top:25px;">
+            <h2>Detalhamento de Carregamentos do Período</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Placa</th>
+                        <th>Motorista</th>
+                        <th>Filial</th>
+                        <th>Doca</th>
+                        <th>Conferente</th>
+                        <th>Chamada Doca</th>
+                        <th>Data/Hora Saída</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="tabelaDetalhamento"></tbody>
+            </table>
+            <div id="msgDetalhamentoVazio" class="empty-msg hidden">Nenhum carregamento no período selecionado.</div>
+        </section>
+
+        <section class="card" style="margin-top:25px;">
             <h2>Carregamentos por Filial de Destino</h2>
             <table>
                 <thead><tr><th>Filial</th><th>Quantidade</th></tr></thead>
@@ -202,7 +222,7 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:12px;bor
         <section class="card" style="margin-top:25px;">
             <h2>Ranking por Motorista</h2>
             <table>
-                <thead><tr><th>Pos.</th><th>Motorista</th><th>Carregamentos</th></tr></thead>
+                <thead><tr><th>Pos.</th><th>Motorista</th><th>Placas</th><th>Carregamentos</th></tr></thead>
                 <tbody id="tabelaPorMotorista"></tbody>
             </table>
             <div id="msgMotoristaVazio" class="empty-msg hidden">Nenhum carregamento no período selecionado.</div>
@@ -333,7 +353,7 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:12px;bor
                 snapCarregamentos.forEach((doc) => {
                     const dados = doc.data();
                     if (dados.status === 'Cancelado') return;
-                    carregamentos.push(dados);
+                    carregamentos.push({ id: doc.id, ...dados });
                 });
 
                 const chegadas = [];
@@ -435,18 +455,130 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:12px;bor
         });
         renderizarGraficoBarras('graficoPorHora', porHora, false);
 
-        // 7) Por filial (tabela simples, sem posição de ranking)
+        // 7) Detalhamento unificado (tabela editável, mesma informação
+        // do CSV exportado) — fica em evidência, antes dos rankings.
+        renderizarDetalhamento(carregamentos);
+
+        // 8) Por filial (tabela simples, sem posição de ranking)
         renderizarTabelaSimples(carregamentos, c => c.filial || '-', 'tabelaPorFilial', 'msgFilialVazio');
 
-        // 8) Ranking por doca (novo)
+        // 9) Ranking por doca (novo)
         renderizarRanking(carregamentos, c => c.doca || '-', 'tabelaPorDoca', 'msgDocaRankingVazio');
 
-        // 9) Ranking por conferente
+        // 10) Ranking por conferente
         renderizarRanking(carregamentos.filter(c => c.conferente && c.conferente !== '-'), c => c.conferente, 'tabelaPorConferente', 'msgConferenteVazio');
 
-        // 10) Ranking por motorista (novo)
-        renderizarRanking(carregamentos.filter(c => c.motorista && c.motorista !== '-'), c => c.motorista, 'tabelaPorMotorista', 'msgMotoristaVazio');
+        // 11) Ranking por motorista, agora com as placas associadas
+        renderizarRankingMotorista(carregamentos);
     }
+
+    // Tabela de detalhamento: mesma base de dados do CSV, mas exibida
+    // direto na tela, com botão de editar em cada linha — corrige o
+    // problema de digitação (ex: "Marcos rai" vs "marcos Rai" contando
+    // como duas pessoas diferentes nos rankings) direto na origem.
+    function renderizarDetalhamento(carregamentos) {
+        const tabela = document.getElementById('tabelaDetalhamento');
+        const msgVazio = document.getElementById('msgDetalhamentoVazio');
+        tabela.innerHTML = '';
+
+        const ordenado = [...carregamentos].sort((a, b) => (b.timestampSaida || 0) - (a.timestampSaida || 0));
+
+        if (ordenado.length === 0) {
+            msgVazio.classList.remove('hidden');
+        } else {
+            msgVazio.classList.add('hidden');
+            ordenado.forEach((c) => {
+                const tr = document.createElement('tr');
+                const dataChamada = c.timestampChamada
+                    ? (new Date(c.timestampChamada).toLocaleDateString('pt-BR') + ' ' + new Date(c.timestampChamada).toLocaleTimeString('pt-BR'))
+                    : '-';
+                const dataSaida = c.timestampSaida
+                    ? (new Date(c.timestampSaida).toLocaleDateString('pt-BR') + ' ' + new Date(c.timestampSaida).toLocaleTimeString('pt-BR'))
+                    : '-';
+
+                const argsEdicao = [c.id, c.placa || '', c.motorista || '', c.filial || '', c.doca || '', c.conferente || '']
+                    .map(v => "'" + String(v).replace(/\\/g, '\\\\').replace(/'/g, "\\'") + "'")
+                    .join(', ');
+
+                tr.innerHTML = `
+                    <td><strong style="color:var(--primary);">${c.placa || '-'}</strong></td>
+                    <td>${c.motorista || '-'}</td>
+                    <td>${c.filial || '-'}</td>
+                    <td>${c.doca || '-'}</td>
+                    <td>${c.conferente || '-'}</td>
+                    <td>${dataChamada}</td>
+                    <td>${dataSaida}</td>
+                    <td><button class="btn-action btn-edit" onclick="editarCarregamento(${argsEdicao})">Editar</button></td>
+                `;
+                tabela.appendChild(tr);
+            });
+        }
+    }
+
+    // Ranking por motorista, incluindo a lista de placas que ele já
+    // rodou no período (um motorista pode ter mais de um veículo).
+    function renderizarRankingMotorista(carregamentos) {
+        let grupos = {};
+        carregamentos.forEach(c => {
+            const motorista = c.motorista && c.motorista !== '-' ? c.motorista : null;
+            if (!motorista) return;
+            if (!grupos[motorista]) grupos[motorista] = { qtd: 0, placas: new Set() };
+            grupos[motorista].qtd++;
+            if (c.placa) grupos[motorista].placas.add(c.placa);
+        });
+        const ordenado = Object.entries(grupos).sort((a, b) => b[1].qtd - a[1].qtd);
+        const tabela = document.getElementById('tabelaPorMotorista');
+        const msgVazio = document.getElementById('msgMotoristaVazio');
+        tabela.innerHTML = '';
+        if (ordenado.length === 0) {
+            msgVazio.classList.remove('hidden');
+        } else {
+            msgVazio.classList.add('hidden');
+            ordenado.forEach(([motorista, dados], idx) => {
+                const tr = document.createElement('tr');
+                const placasTexto = Array.from(dados.placas).join(', ');
+                tr.innerHTML = `<td>${idx + 1}º</td><td>${motorista}</td><td>${placasTexto}</td><td>${dados.qtd}</td>`;
+                tabela.appendChild(tr);
+            });
+        }
+    }
+
+    // EDITAR CARREGAMENTO: corrige placa/motorista/filial/doca/conferente
+    // de um registro já feito (ativo ou histórico). Essencial para
+    // corrigir erros de digitação que criam entradas duplicadas nos
+    // rankings (ex: variações de escrita do nome de um conferente).
+    window.editarCarregamento = (id, placaAtual, motoristaAtual, filialAtual, docaAtual, conferenteAtual) => {
+        if(!usuarioLogado) { alert("Acesso negado! Faça o login de administrador primeiro."); return; }
+
+        const novaPlaca = prompt("Placa:", placaAtual);
+        if (novaPlaca === null) return;
+        const novoMotorista = prompt("Motorista:", motoristaAtual);
+        if (novoMotorista === null) return;
+        const novaFilial = prompt("Filial Destino:", filialAtual);
+        if (novaFilial === null) return;
+        const novaDoca = prompt("Doca:", docaAtual);
+        if (novaDoca === null) return;
+        const novoConferente = prompt("Conferente:", conferenteAtual);
+        if (novoConferente === null) return;
+
+        const placaFormatada = novaPlaca.trim().toUpperCase();
+        const regexPlaca = /^[A-Z]{3}-[0-9][A-Z0-9][0-9]{2}$/;
+        if (!regexPlaca.test(placaFormatada)) {
+            alert("🚫 FORMATO DE PLACA INVÁLIDO!\n\nExemplo correto: AAA-0A00\n\nNenhuma alteração foi salva.");
+            return;
+        }
+
+        db.collection("fila_patio").doc(id).update({
+            placa: placaFormatada,
+            motorista: novoMotorista.trim(),
+            filial: novaFilial.trim(),
+            doca: novaDoca.trim(),
+            conferente: novoConferente.trim()
+        }).then(() => {
+            alert("Carregamento atualizado com sucesso.");
+            carregarEstatisticas();
+        }).catch(err => alert("Erro ao atualizar: " + err.message));
+    };
 
     function renderizarGraficoBarras(idContainer, dadosPorChave, ordenarPorData) {
         const container = document.getElementById(idContainer);
