@@ -435,8 +435,24 @@ function iniciarListenerFila(){
     <span class="badge status-aguardando">Aguardando</span>`;
    listaFila.appendChild(item);
   });
-  if(minhaPosicao){avisoMinhaViagem.classList.remove('hidden');avisoMinhaViagem.innerText="🚚 Seu veículo está na "+minhaPosicao+"ª posição da fila."}
-  else avisoMinhaViagem.classList.add('hidden');
+  if(minhaPosicao){
+   avisoMinhaViagem.classList.remove('hidden');
+   avisoMinhaViagem.innerText="🚚 Seu veículo está na "+minhaPosicao+"ª posição da fila.";
+  }else{
+   // Se não está mais Aguardando, confere se foi chamado para a doca —
+   // assim o motorista não fica sem nenhum aviso ao abrir a aba Fila
+   // logo depois de ser chamado. Esse aviso some sozinho quando o
+   // veículo for liberado para viagem (o documento sai da consulta
+   // "Aguardando"/"Em Doca" e deixa de existir em ultimaViagemPorPlaca).
+   const meuVeiculoEmDoca=Object.values(ultimaViagemPorPlaca).find(v=>v.status==='Em Doca'&&v.email&&v.email.toLowerCase()===meuEmail);
+   if(meuVeiculoEmDoca){
+    avisoMinhaViagem.classList.remove('hidden');
+    const docaTexto=(meuVeiculoEmDoca.doca&&meuVeiculoEmDoca.doca!=='-')?(' (Doca '+meuVeiculoEmDoca.doca+')'):'';
+    avisoMinhaViagem.innerText="🚛 Seu veículo já foi chamado para a doca"+docaTexto+"! Confira a aba \"Doca\".";
+   }else{
+    avisoMinhaViagem.classList.add('hidden');
+   }
+  }
 
   // ===== ABAS "DOCA" e "LOJA": só veículos Em Doca. Visibilidade: o
   // motorista só vê o PRÓPRIO veículo; o e-mail admin vê todos. =====
