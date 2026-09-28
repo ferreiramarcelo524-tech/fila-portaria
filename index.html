@@ -281,6 +281,23 @@ function verificarLocalizacaoEContinuar(callbackSucesso){
  },{enableHighAccuracy:true,timeout:10000,maximumAge:0});
 }
 
+// ===== INTEGRAÇÃO COM A PLANILHA (Google Apps Script) =====
+// Cole aqui a URL do Web App implantado no Apps Script.
+const API_PLANILHA="https://script.google.com/macros/s/AKfycbzOEob4-Md_O0LcoraOR327yGVM_ojmepbNoKL2SlfWIoBQdu0xnnwjk-OCMuo5Q9djpg/exec";
+
+function enviarParaPlanilha(acao,placa){
+ if(!API_PLANILHA||API_PLANILHA.indexOf("COLE_")===0)return;
+ try{
+  fetch(API_PLANILHA,{
+   method:"POST",
+   mode:"no-cors",
+   headers:{"Content-Type":"text/plain;charset=utf-8"},
+   body:JSON.stringify({acao:acao,placa:placa}),
+   keepalive:true
+  }).catch(e=>console.error("Planilha:",e));
+ }catch(e){console.error("Planilha:",e)}
+}
+
 function gravarEntradaBanco(){
  db.collection("fila_patio").add({
   placa:placaInput.value.trim().toUpperCase(),
@@ -288,6 +305,7 @@ function gravarEntradaBanco(){
   email:auth.currentUser.email.toLowerCase(),
   timestampChegada:Date.now(),status:"Aguardando",doca:"-",conferente:"-",orgao:"Portaria CD84"
  }).then(()=>{
+  enviarParaPlanilha("ENTRADA",placaInput.value.trim().toUpperCase());
   blocoFormulario.classList.add('hidden');secaoSucesso.classList.remove('hidden');
  }).catch(error=>{
   console.error("Erro ao gravar no banco:",error);
