@@ -1056,12 +1056,10 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:12px;bor
 </script>
 <script src="frete.js"></script>
 <script>
-/* docas.js — aba "Docas" do painel.html (substitui a planilha "Docas e carregamentos")
-   Coleções: docas_carregamentos (ativos) | docas_historico (finalizados)
-             docas_resumo (totais dia_/mes_) | cubagem_veiculos (placa -> cubagem) */
+/* docas.js v2 — aba "Expedição" (Carregamentos | Histórico | Cadastros | Calendário) */
 (function () {
   const db = firebase.firestore(), auth = firebase.auth(), F = firebase.firestore.FieldValue;
-  const CAL = {
+  const CAL0 = {
     1: "193:20,143:21,124:22,127:23,190:24,158:25,BARCARENA:12,ALTAMIRA:13,ELDORADO:15",
     2: "194:20,603:21,35:22,142:23,129:24,125:25,134:26,BELÉM / 194:12,CASTANHAL:13,TUCUMÃ:15,CANAÃ:17",
     3: "632:20,608:21,36:22,46:23,609:24,191:25,VIGIA:12,PARAGOM...:13,BRAGANÇA:15,CAPANEMA:17",
@@ -1069,152 +1067,300 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:12px;bor
     5: "129:20,CANAÃ:12"
   };
   const DIAS = { 1: "Segunda", 2: "Terça", 3: "Quarta", 4: "Quinta", 5: "Sexta" };
-  const TIPOS = ["ABASTECIMENTO", "ELETRO", "MATEUS PLUS", "TRANSFERENCIA"];
+  const TIPOS0 = [["ABASTECIMENTO", "#f7e092"], ["ELETRO", "#0b723b"], ["MATEUS PLUS", "#a30000"], ["TRANSFERENCIA", "#004d99"]];
+  const $ = id => document.getElementById(id);
   const pad = n => String(n).padStart(2, "0");
   const iso = d => d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate());
   const BRL = v => (+v || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
   const norm = p => String(p || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
   const esc = t => String(t == null ? "" : t).replace(/[<>&"']/g, "");
+  const lum = c => { const n = parseInt(String(c).slice(1), 16) || 0; return ((n >> 16) * 299 + ((n >> 8 & 255) * 587) + (n & 255) * 114) / 1000 > 150 ? "#222" : "#fff"; };
   const admin = () => !!auth.currentUser;
-  let ativos = [], placas = [], dataSel = iso(new Date());
+  const bloq = () => { if (!admin()) { alert("Acesso negado! Faça o login de administrador primeiro."); return true; } };
+  const parse = k => (CAL0[k] || "").split(",").filter(Boolean).map(s => { const [f, d] = s.split(":"); return { f, d: "DOCA " + d }; });
+  let ativos = [], tipos = [], filiais = [], docasL = [], fila = [], placas = [], cal = {}, hist = [], hPer = 7;
+  let dataSel = iso(new Date()), rDia = 0, rMes = 0, mesMostrado = 0, atraso = 0;
 
-  // ---- UI ----
+  // ---------- UI ----------
+  const st = document.createElement("style");
+  st.textContent = `#tab-docas .card{margin-bottom:10px;padding:14px}#tab-docas .stats-grid{gap:10px;margin-bottom:10px}
+  #tab-docas .stat-card{padding:10px}#tab-docas .stat-numero{font-size:1.7rem}#tab-docas td,#tab-docas th{padding:6px 8px}
+  #tab-docas input,#tab-docas select,#tab-docas textarea{padding:4px 6px;border:1px solid #cfd8e6;border-radius:5px;font:inherit}
+  #tab-docas .dc-pane{display:none}#tab-docas .dc-pane.on{display:block}#tab-docas .chip{display:inline-block;background:#eef3fa;border-radius:14px;padding:3px 10px;margin:3px;font-size:.8rem;font-weight:600}
+  #tab-docas .chip b{cursor:pointer;color:#e74c3c;margin-left:6px}`;
+  document.head.appendChild(st);
   const btn = document.createElement("button");
-  btn.type = "button"; btn.className = "tab-btn"; btn.id = "btn-tab-docas"; btn.textContent = "Docas";
+  btn.type = "button"; btn.className = "tab-btn"; btn.id = "btn-tab-exped"; btn.textContent = "Expedição";
   document.querySelector(".tabs").appendChild(btn);
   const sec = document.createElement("div");
   sec.id = "tab-docas"; sec.className = "tab-conteudo";
   sec.innerHTML = `
-  <section class="card">
-    <div class="card-header-flex"><h2>Docas e Carregamentos</h2>
-      <div class="periodo-seletor">
-        <input type="date" id="dc-data" class="input-data-especifica">
+  <div class="periodo-seletor" style="margin-bottom:10px">
+    <button class="periodo-btn active" data-sub="car">Carregamentos</button><button class="periodo-btn" data-sub="his">Histórico</button>
+    <button class="periodo-btn" data-sub="cad">Cadastros</button><button class="periodo-btn" data-sub="cal">Calendário</button></div>
+  <div class="dc-pane on" id="p-car"><section class="card">
+    <div class="card-header-flex" style="margin-bottom:8px;padding-bottom:8px"><h2>Carregamentos</h2>
+      <div class="periodo-seletor"><input type="date" id="dc-data">
         ${Object.keys(DIAS).map(k => `<button class="periodo-btn" data-dia="${k}">${DIAS[k]}</button>`).join("")}
         <button class="btn-action btn-add" id="dc-add" style="margin:0">+ Linha</button>
-        <button class="btn-action btn-cancel" id="dc-limpar" style="margin:0">Limpar</button>
-      </div></div>
-    <div class="stats-grid">
-      <div class="stat-card"><div class="stat-numero" id="dc-dia">-</div><div class="stat-label">Faturamento do dia</div></div>
-      <div class="stat-card"><div class="stat-numero" id="dc-mes">-</div><div class="stat-label">Faturamento do mês</div></div>
-    </div>
-    <table><thead><tr><th>Tipo</th><th>Filial</th><th>Doca</th><th>Valor</th><th>Veículo</th><th>Data</th><th></th></tr></thead>
-    <tbody id="dc-corpo"></tbody></table>
-    <div id="dc-vazio" class="empty-msg">Nenhum carregamento. Use os botões de dia ou "+ Linha".</div>
-    <datalist id="dc-placas"></datalist>
-  </section>
-  <section class="card"><h2>Cubagem dos Veículos</h2>
-    <div class="periodo-seletor">
-      <input class="input-busca" style="min-width:110px" id="cb-placa" placeholder="Placa AAA-0A00">
-      <input class="input-busca" style="min-width:90px" id="cb-c" placeholder="Compr.">
-      <input class="input-busca" style="min-width:90px" id="cb-a" placeholder="Altura">
-      <input class="input-busca" style="min-width:90px" id="cb-l" placeholder="Largura">
-      <button class="btn-action btn-add" id="cb-salvar" style="margin:0">Salvar</button>
-    </div>
-    <table style="margin-top:12px"><thead><tr><th>Placa</th><th>Cubagem m³</th><th>Pallets</th><th></th></tr></thead><tbody id="cb-corpo"></tbody></table>
-  </section>`;
+        <button class="btn-action btn-done" id="dc-fim" style="margin:0">Expedição finalizada</button></div></div>
+    <div class="stats-grid"><div class="stat-card"><div class="stat-numero" id="dc-dia">-</div><div class="stat-label">Faturamento do dia</div></div>
+    <div class="stat-card"><div class="stat-numero" id="dc-mes">-</div><div class="stat-label">Faturamento do mês (só finalizados)</div></div></div>
+    <table><thead><tr><th>Tipo</th><th>Filial</th><th>Doca</th><th>Valor</th><th>Veículo (fila)</th><th>Data</th><th></th></tr></thead><tbody id="dc-corpo"></tbody></table>
+    <div id="dc-vazio" class="empty-msg">Nenhum carregamento. Use os botões de dia ou "+ Linha".</div></section></div>
+  <div class="dc-pane" id="p-his"><section class="card">
+    <div class="card-header-flex" style="margin-bottom:8px;padding-bottom:8px"><h2>Histórico (guardado por 3 meses)</h2>
+      <div class="periodo-seletor"><button class="periodo-btn active" data-per="7">7 dias</button><button class="periodo-btn" data-per="30">30 dias</button>
+        <input type="date" id="h-i"><input type="date" id="h-f"><button class="periodo-btn" data-per="esp">Buscar período</button>
+        <input type="text" id="h-q" class="input-busca" style="min-width:200px" placeholder="Buscar filial, doca, veículo, tipo..."></div></div>
+    <div id="h-tot" style="font-weight:700;margin-bottom:6px"></div>
+    <table><thead><tr><th>Tipo</th><th>Filial</th><th>Doca</th><th>Valor</th><th>Veículo</th><th>Data</th><th>Finalizado em</th><th></th></tr></thead><tbody id="h-corpo"></tbody></table>
+    <div id="h-vazio" class="empty-msg">Nenhum registro no período.</div>
+    <p style="font-size:.75rem;color:#7d8da4;margin:8px 0 0">O contador mensal zera sozinho na virada do mês. Editar valor ou data aqui ajusta os totais automaticamente.</p></section></div>
+  <div class="dc-pane" id="p-cad">
+    <section class="card"><h2>Tipos de operação</h2><div class="periodo-seletor"><input id="ct-n" placeholder="Nome do tipo"><input type="color" id="ct-c" value="#f7e092"><button class="btn-action btn-add" id="ct-add" style="margin:0">Adicionar</button></div><div id="l-tipos" style="margin-top:8px"></div></section>
+    <section class="card"><h2>Filiais</h2><textarea id="cf-t" rows="3" style="width:100%" placeholder="Uma filial por linha (ex: LOJA 193)"></textarea><button class="btn-action btn-add" id="cf-add">Adicionar filiais</button><div id="l-filiais"></div></section>
+    <section class="card"><h2>Docas</h2><div class="periodo-seletor">DOCA de <input type="number" id="cd-a" style="width:70px"> até <input type="number" id="cd-b" style="width:70px"><button class="btn-action btn-add" id="cd-add" style="margin:0">Gerar</button></div><div id="l-docas" style="margin-top:8px"></div></section>
+    <section class="card"><h2>Cubagem dos veículos</h2><div class="periodo-seletor"><input id="cb-placa" placeholder="Placa AAA-0A00"><input id="cb-c" placeholder="Compr." style="width:80px"><input id="cb-a" placeholder="Altura" style="width:80px"><input id="cb-l" placeholder="Largura" style="width:80px"><button class="btn-action btn-add" id="cb-salvar" style="margin:0">Salvar</button></div>
+    <table style="margin-top:8px"><thead><tr><th>Placa</th><th>Cubagem m³</th><th>Pallets</th><th></th></tr></thead><tbody id="cb-corpo"></tbody></table></section></div>
+  <div class="dc-pane" id="p-cal"><section class="card"><h2>Calendário de abastecimento</h2>
+    <p style="font-size:.8rem;color:#7d8da4;margin:0 0 8px">Digite a filial (ex: 193 vira LOJA 193) e a doca de cada dia. Os botões de dia usam este calendário.</p>
+    <div style="overflow-x:auto"><table id="cal-t"></table></div></section></div>
+  <datalist id="dl-f"></datalist><datalist id="dl-d"></datalist>`;
   document.querySelector(".container").appendChild(sec);
-  const $ = id => document.getElementById(id);
-  $("dc-data").value = dataSel;
-  $("dc-data").onchange = e => { dataSel = e.target.value || dataSel; };
+  $("dc-data").value = dataSel; $("dc-data").onchange = e => { dataSel = e.target.value || dataSel; };
 
-  const abrir = () => {
+  btn.onclick = () => {
     document.querySelectorAll(".tab-conteudo").forEach(e => e.classList.remove("ativo"));
     document.querySelectorAll(".tab-btn").forEach(e => e.classList.remove("active"));
     sec.classList.add("ativo"); btn.classList.add("active");
   };
-  btn.onclick = abrir;
   document.addEventListener("click", e => {
     const b = e.target.closest(".tab-btn");
     if (b && b !== btn) { sec.classList.remove("ativo"); btn.classList.remove("active"); }
   });
 
-  // ---- Dados ----
-  db.collection("docas_carregamentos").onSnapshot(s => {
-    ativos = s.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => (a.ordem || 0) - (b.ordem || 0));
-    desenhar();
-  });
-  const mes = iso(new Date()).slice(0, 7);
-  let rDia = 0, rMes = 0;
-  const totais = () => {
+  // ---------- Animações ----------
+  function voar(v) {
+    if (!v) return;
+    const a = $("dc-dia").getBoundingClientRect(), b = $("dc-mes").getBoundingClientRect(), el = document.createElement("div");
+    el.textContent = "+ " + BRL(v);
+    el.style.cssText = `position:fixed;z-index:9999;font-weight:900;color:#1d9d60;font-size:1.4rem;pointer-events:none;left:${a.left + a.width / 2}px;top:${a.top + a.height / 2}px`;
+    document.body.appendChild(el);
+    el.animate([{ transform: "translate(-50%,-50%) scale(1.2)", opacity: 1 },
+      { transform: `translate(calc(-50% + ${b.left - a.left}px),calc(-50% + ${b.top - a.top}px)) scale(.7)`, opacity: .3 }],
+      { duration: 900, easing: "ease-in-out" }).onfinish = () => el.remove();
+    atraso = 850;
+  }
+  function contar(de, para, ms) {
+    const t0 = performance.now();
+    const passo = t => { const p = Math.min(1, (t - t0) / ms); mesMostrado = de + (para - de) * p; $("dc-mes").textContent = BRL(mesMostrado); if (p < 1) requestAnimationFrame(passo); };
+    requestAnimationFrame(passo);
+  }
+  function totais() {
     const a = ativos.reduce((s, x) => s + (+x.valor || 0), 0);
-    $("dc-dia").textContent = BRL(rDia + a); $("dc-mes").textContent = BRL(rMes + a);
-  };
-  db.doc("docas_resumo/dia_" + iso(new Date())).onSnapshot(d => { rDia = d.exists ? d.data().total || 0 : 0; totais(); });
-  db.doc("docas_resumo/mes_" + mes).onSnapshot(d => { rMes = d.exists ? d.data().total || 0 : 0; totais(); });
-  db.collection("cubagem_veiculos").onSnapshot(s => {
-    placas = s.docs.map(d => d.data()).sort((a, b) => a.placa.localeCompare(b.placa));
-    $("dc-placas").innerHTML = placas.map(p => `<option value="${esc(p.placa)}">`).join("");
-    $("cb-corpo").innerHTML = placas.map(p => `<tr><td><strong>${esc(p.placa)}</strong></td><td>${p.cubagem}</td><td>${p.pallets || "-"}</td>
-      <td><button class="btn-action btn-cancel" data-delcb="${norm(p.placa)}">Excluir</button></td></tr>`).join("");
-  });
-
-  function desenhar() {
-    totais();
-    $("dc-vazio").style.display = ativos.length ? "none" : "block";
-    $("dc-corpo").innerHTML = ativos.map(x => `<tr data-id="${x.id}">
-      <td><select data-f="tipo">${TIPOS.map(t => `<option${t === x.tipo ? " selected" : ""}>${t}</option>`).join("")}</select></td>
-      <td><input data-f="filial" value="${esc(x.filial)}" style="width:130px"></td>
-      <td><input data-f="doca" value="${esc(x.doca)}" style="width:90px"></td>
-      <td><input data-f="valor" value="${x.valor ? String(x.valor).replace(".", ",") : ""}" style="width:110px" placeholder="0,00"></td>
-      <td><input data-f="veiculo" list="dc-placas" value="${esc(x.veiculo)}" style="width:100px"></td>
-      <td>${esc((x.data || "").split("-").reverse().join("/"))}</td>
-      <td><button class="btn-action btn-done" data-fin="${x.id}">Finalizar</button><button class="btn-action btn-cancel" data-del="${x.id}">✕</button></td></tr>`).join("");
+    $("dc-dia").textContent = BRL(rDia + a);
+    const de = mesMostrado, d = atraso; atraso = 0;
+    setTimeout(() => contar(de, rMes, d ? 900 : 1), d);
   }
 
-  // ---- Ações ----
-  const bloq = () => { if (!admin()) { alert("Acesso negado! Faça o login de administrador primeiro."); return true; } };
+  // ---------- Dados ----------
+  db.collection("docas_carregamentos").onSnapshot(s => {
+    ativos = s.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => (a.ordem || 0) - (b.ordem || 0)); desenhar(); totais();
+  });
+  const hoje = iso(new Date());
+  db.doc("docas_resumo/dia_" + hoje).onSnapshot(d => { rDia = d.exists ? d.data().total || 0 : 0; totais(); });
+  db.doc("docas_resumo/mes_" + hoje.slice(0, 7)).onSnapshot(d => { rMes = d.exists ? d.data().total || 0 : 0; totais(); });
+  db.collection("docas_tipos").onSnapshot(s => {
+    tipos = s.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => a.nome.localeCompare(b.nome));
+    if (!tipos.length && admin()) TIPOS0.forEach(([n, c]) => db.collection("docas_tipos").doc(norm(n)).set({ nome: n, cor: c }));
+    $("l-tipos").innerHTML = tipos.map(t => `<span class="chip" style="background:${t.cor};color:${lum(t.cor)}">${esc(t.nome)} <input type="color" data-tc="${t.id}" value="${t.cor}" style="padding:0;width:26px;height:20px"><b data-delc="docas_tipos|${t.id}">✕</b></span>`).join("");
+    desenhar(); desenharHist();
+  });
+  const lista = (col, arr, el, dl) => db.collection(col).onSnapshot(s => {
+    arr.length = 0; s.docs.forEach(d => arr.push({ id: d.id, ...d.data() }));
+    arr.sort((a, b) => a.nome.localeCompare(b.nome, "pt", { numeric: true }));
+    $(el).innerHTML = arr.map(x => `<span class="chip">${esc(x.nome)}<b data-delc="${col}|${x.id}">✕</b></span>`).join("");
+    $(dl).innerHTML = arr.map(x => `<option value="${esc(x.nome)}">`).join("");
+  });
+  lista("docas_filiais", filiais, "l-filiais", "dl-f"); lista("docas_docas", docasL, "l-docas", "dl-d");
+  db.collection("docas_calendario").onSnapshot(s => { s.forEach(d => cal[d.id] = d.data().itens || []); desenharCal(); });
+  db.collection("fila_patio").where("status", "==", "Aguardando").onSnapshot(s => {
+    fila = s.docs.map(d => d.data()).sort((a, b) => (a.timestampChegada || 0) - (b.timestampChegada || 0)).map(d => d.placa).filter(Boolean); desenhar();
+  });
+  db.collection("cubagem_veiculos").onSnapshot(s => {
+    placas = s.docs.map(d => d.data()).sort((a, b) => a.placa.localeCompare(b.placa));
+    $("cb-corpo").innerHTML = placas.map(p => `<tr><td><strong>${esc(p.placa)}</strong></td><td>${p.cubagem}</td><td>${p.pallets || "-"}</td><td><button class="btn-action btn-cancel" data-delc="cubagem_veiculos|${norm(p.placa)}">Excluir</button></td></tr>`).join("");
+  });
+
+  // ---------- Carregamentos ----------
+  let pend = false;
+  const editando = () => { const a = document.activeElement; return a && a.closest && a.closest("#tab-docas") && /INPUT|SELECT|TEXTAREA/.test(a.tagName); };
+  function desenhar() {
+    if (editando()) { pend = true; return; }
+    $("dc-vazio").style.display = ativos.length ? "none" : "block";
+    $("dc-corpo").innerHTML = ativos.map(x => {
+      const cor = (tipos.find(t => t.nome === x.tipo) || {}).cor || "#fff";
+      const vs = [...new Set([x.veiculo, ...fila].filter(Boolean))];
+      return `<tr data-id="${x.id}">
+      <td><select data-f="tipo" style="background:${cor};color:${lum(cor)};font-weight:700">${tipos.map(t => `<option${t.nome === x.tipo ? " selected" : ""}>${esc(t.nome)}</option>`).join("")}</select></td>
+      <td><input data-f="filial" list="dl-f" value="${esc(x.filial)}" style="width:140px"></td>
+      <td><input data-f="doca" list="dl-d" value="${esc(x.doca)}" style="width:100px"></td>
+      <td><input data-f="valor" value="${x.valor ? String(x.valor).replace(".", ",") : ""}" style="width:110px" placeholder="0,00"></td>
+      <td><select data-f="veiculo"><option value=""></option>${vs.map(v => `<option${v === x.veiculo ? " selected" : ""}>${esc(v)}</option>`).join("")}</select></td>
+      <td>${esc((x.data || "").split("-").reverse().join("/"))}</td>
+      <td><button class="btn-action btn-done" data-fin="${x.id}">Finalizar</button><button class="btn-action btn-cancel" data-del="${x.id}">✕</button></td></tr>`;
+    }).join("");
+  }
+  document.addEventListener("focusout", () => setTimeout(() => { if (pend && !editando()) { pend = false; desenhar(); desenharCal(); } }, 150));
   $("dc-corpo").addEventListener("change", e => {
     const f = e.target.dataset.f; if (!f || bloq()) return;
     let v = e.target.value.trim();
     if (f === "valor") v = parseFloat(v.replace(/[R$\s.]/g, "").replace(",", ".")) || 0;
-    if (f === "veiculo") v = v.toUpperCase();
+    if (f === "filial" || f === "doca") v = v.toUpperCase();
     db.collection("docas_carregamentos").doc(e.target.closest("tr").dataset.id).update({ [f]: v }).catch(x => alert(x.message));
   });
-  document.addEventListener("click", async e => {
+  function ajusta(data, v) {
+    if (!v || !data) return;
+    const b = { total: F.increment(v) };
+    db.doc("docas_resumo/dia_" + data).set(b, { merge: true }); db.doc("docas_resumo/mes_" + data.slice(0, 7)).set(b, { merge: true });
+  }
+  function arquivar(lote, b) {
+    let soma = 0;
+    lote.forEach(x => {
+      const v = +x.valor || 0; soma += v; ajusta(x.data || iso(new Date()), v);
+      b.set(db.collection("docas_historico").doc(x.id), { ...x, data: x.data || iso(new Date()), finalizadoEm: Date.now() });
+      b.delete(db.collection("docas_carregamentos").doc(x.id));
+    });
+    return soma;
+  }
+  $("dc-fim").onclick = () => {
+    if (bloq() || !ativos.length) return;
+    if (!confirm("Finalizar a expedição? Todos os valores vão para o mensal e a lista será limpa.")) return;
+    const b = db.batch(), soma = arquivar(ativos, b);
+    b.commit().then(() => voar(soma)).catch(x => alert(x.message));
+  };
+  $("dc-add").onclick = () => {
+    if (bloq()) return;
+    db.collection("docas_carregamentos").add({ tipo: (tipos[0] || {}).nome || "ABASTECIMENTO", filial: "", doca: "", valor: 0, veiculo: "", data: dataSel, ordem: Date.now() });
+  };
+  function itensDia(k) { return (cal[k] && cal[k].length ? cal[k] : parse(k)).filter(i => i.f); }
+
+  // ---------- Histórico ----------
+  async function carregarHist() {
+    let i, f = Date.now();
+    if (hPer === "esp") { if (!$("h-i").value || !$("h-f").value) return alert("Escolha as datas inicial e final."); i = new Date($("h-i").value + "T00:00:00").getTime(); f = new Date($("h-f").value + "T23:59:59").getTime(); }
+    else i = f - hPer * 864e5;
+    const s = await db.collection("docas_historico").where("finalizadoEm", ">=", i).where("finalizadoEm", "<=", f).get();
+    hist = s.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => b.finalizadoEm - a.finalizadoEm); desenharHist();
+    if (admin()) { const o = await db.collection("docas_historico").where("finalizadoEm", "<", Date.now() - 90 * 864e5).limit(400).get(); if (!o.empty) { const b = db.batch(); o.forEach(d => b.delete(d.ref)); b.commit(); } }
+  }
+  function desenharHist() {
+    const q = $("h-q").value.trim().toLowerCase();
+    const l = hist.filter(x => !q || [x.tipo, x.filial, x.doca, x.veiculo].join(" ").toLowerCase().includes(q));
+    $("h-vazio").style.display = l.length ? "none" : "block";
+    $("h-tot").textContent = l.length + " registros · Total: " + BRL(l.reduce((s, x) => s + (+x.valor || 0), 0));
+    $("h-corpo").innerHTML = l.map(x => {
+      const cor = (tipos.find(t => t.nome === x.tipo) || {}).cor || "#fff";
+      return `<tr data-id="${x.id}"><td><select data-f="tipo" style="background:${cor};color:${lum(cor)};font-weight:700">${tipos.map(t => `<option${t.nome === x.tipo ? " selected" : ""}>${esc(t.nome)}</option>`).join("")}${tipos.some(t => t.nome === x.tipo) ? "" : `<option selected>${esc(x.tipo)}</option>`}</select></td>
+      <td><input data-f="filial" list="dl-f" value="${esc(x.filial)}" style="width:130px"></td><td><input data-f="doca" list="dl-d" value="${esc(x.doca)}" style="width:95px"></td>
+      <td><input data-f="valor" value="${x.valor ? String(x.valor).replace(".", ",") : ""}" style="width:105px"></td><td><input data-f="veiculo" value="${esc(x.veiculo)}" style="width:90px"></td>
+      <td><input type="date" data-f="data" value="${esc(x.data)}"></td><td>${new Date(x.finalizadoEm).toLocaleString("pt-BR")}</td>
+      <td><button class="btn-action btn-cancel" data-delh="${x.id}">✕</button></td></tr>`;
+    }).join("");
+  }
+  $("h-q").oninput = desenharHist;
+  $("h-corpo").addEventListener("change", e => {
+    const f = e.target.dataset.f; if (!f || bloq()) return;
+    const x = hist.find(h => h.id === e.target.closest("tr").dataset.id); if (!x) return;
+    let v = e.target.value.trim();
+    if (f === "valor") v = parseFloat(v.replace(/[R$\s.]/g, "").replace(",", ".")) || 0;
+    if (f === "filial" || f === "doca" || f === "veiculo") v = v.toUpperCase();
+    if (f === "valor") ajusta(x.data, v - (+x.valor || 0));
+    if (f === "data" && v) { ajusta(x.data, -(+x.valor || 0)); ajusta(v, +x.valor || 0); }
+    x[f] = v; db.collection("docas_historico").doc(x.id).update({ [f]: v }).then(desenharHist).catch(er => alert(er.message));
+  });
+
+  // ---------- Calendário ----------
+  function desenharCal() {
+    if (editando()) { pend = true; return; }
+    let h = "<thead><tr>" + Object.keys(DIAS).map(k => `<th>${DIAS[k]}</th>`).join("") + "</tr></thead><tbody>";
+    for (let r = 0; r < 12; r++) {
+      h += "<tr>" + Object.keys(DIAS).map(k => {
+        const it = itensDia(k)[r] || { f: "", d: "" };
+        return `<td style="white-space:nowrap"><input data-cf="${k}" value="${esc(it.f)}" style="width:105px" placeholder="filial"><input data-cd="${k}" list="dl-d" value="${esc(it.d)}" style="width:80px" placeholder="doca"></td>`;
+      }).join("") + "</tr>";
+    }
+    $("cal-t").innerHTML = h + "</tbody>";
+  }
+  $("cal-t").addEventListener("change", e => {
+    const k = e.target.dataset.cf || e.target.dataset.cd; if (!k || bloq()) return;
+    const fs = [...$("cal-t").querySelectorAll(`[data-cf="${k}"]`)], ds = [...$("cal-t").querySelectorAll(`[data-cd="${k}"]`)];
+    const itens = fs.map((c, i) => ({ f: c.value.trim().toUpperCase(), d: ds[i].value.trim().toUpperCase() })).filter(i => i.f);
+    db.collection("docas_calendario").doc(k).set({ itens }).catch(er => alert(er.message));
+  });
+
+  // ---------- Cliques gerais ----------
+  sec.addEventListener("click", async e => {
     const t = e.target;
+    if (t.dataset.sub) {
+      sec.querySelectorAll("[data-sub]").forEach(b => b.classList.toggle("active", b === t));
+      sec.querySelectorAll(".dc-pane").forEach(p => p.classList.toggle("on", p.id === "p-" + t.dataset.sub));
+      if (t.dataset.sub === "his") carregarHist(); if (t.dataset.sub === "cal") desenharCal();
+    }
+    if (t.dataset.per) {
+      hPer = t.dataset.per === "esp" ? "esp" : +t.dataset.per;
+      sec.querySelectorAll("[data-per]").forEach(b => b.classList.toggle("active", b === t)); carregarHist();
+    }
     if (t.dataset.fin) {
       if (bloq()) return;
       const x = ativos.find(a => a.id === t.dataset.fin); if (!x) return;
-      const b = db.batch(), v = +x.valor || 0, d = x.data || iso(new Date());
-      b.set(db.collection("docas_historico").doc(x.id), { ...x, finalizadoEm: Date.now() });
-      b.delete(db.collection("docas_carregamentos").doc(x.id));
-      if (v) {
-        b.set(db.doc("docas_resumo/dia_" + d), { total: F.increment(v) }, { merge: true });
-        b.set(db.doc("docas_resumo/mes_" + d.slice(0, 7)), { total: F.increment(v) }, { merge: true });
-      }
-      b.commit().catch(x => alert(x.message));
+      const b = db.batch(), s = arquivar([x], b); b.commit().then(() => voar(s)).catch(er => alert(er.message));
     }
-    if (t.dataset.del && !bloq() && confirm("Excluir esta linha sem arquivar?"))
-      db.collection("docas_carregamentos").doc(t.dataset.del).delete();
-    if (t.dataset.delcb && !bloq()) db.collection("cubagem_veiculos").doc(t.dataset.delcb).delete();
+    if (t.dataset.del && !bloq() && confirm("Excluir esta linha sem arquivar?")) db.collection("docas_carregamentos").doc(t.dataset.del).delete();
+    if (t.dataset.delh && !bloq() && confirm("Excluir este registro do histórico? O valor sai dos totais.")) {
+      const x = hist.find(h => h.id === t.dataset.delh); ajusta(x.data, -(+x.valor || 0));
+      await db.collection("docas_historico").doc(x.id).delete(); hist = hist.filter(h => h !== x); desenharHist();
+    }
+    if (t.dataset.delc && !bloq()) { const [c, id] = t.dataset.delc.split("|"); db.collection(c).doc(id).delete(); }
     if (t.dataset.dia) {
       if (bloq()) return;
       if (ativos.length && !confirm("Substituir a lista atual pela de " + DIAS[t.dataset.dia] + "?")) return;
       const b = db.batch();
       ativos.forEach(a => b.delete(db.collection("docas_carregamentos").doc(a.id)));
-      CAL[t.dataset.dia].split(",").forEach((it, i) => {
-        const [n, doca] = it.split(":"), loja = /^\d+$/.test(n);
+      itensDia(t.dataset.dia).forEach((it, i) => {
+        const loja = /^(LOJA )?\d+$/.test(it.f), n = it.f.replace(/^LOJA /, "");
         b.set(db.collection("docas_carregamentos").doc(), {
-          tipo: loja ? "ABASTECIMENTO" : "ELETRO", filial: loja ? "LOJA " + n : n, doca: "DOCA " + doca,
-          valor: 0, veiculo: "", data: dataSel, ordem: i + 1
+          tipo: loja ? "ABASTECIMENTO" : "ELETRO", filial: loja ? "LOJA " + n : it.f,
+          doca: /^\d+$/.test(it.d) ? "DOCA " + it.d : it.d, valor: 0, veiculo: "", data: dataSel, ordem: i + 1
         });
       });
       b.commit().catch(x => alert(x.message));
     }
   });
-  $("dc-add").onclick = () => {
-    if (bloq()) return;
-    db.collection("docas_carregamentos").add({ tipo: "ABASTECIMENTO", filial: "", doca: "", valor: 0, veiculo: "", data: dataSel, ordem: Date.now() });
+  sec.addEventListener("change", e => {
+    if (e.target.dataset.tc && !bloq()) db.collection("docas_tipos").doc(e.target.dataset.tc).update({ cor: e.target.value });
+  });
+
+  // ---------- Cadastros ----------
+  $("ct-add").onclick = () => {
+    const n = $("ct-n").value.trim().toUpperCase(); if (bloq() || !n) return;
+    db.collection("docas_tipos").doc(norm(n)).set({ nome: n, cor: $("ct-c").value }).then(() => $("ct-n").value = "");
   };
-  $("dc-limpar").onclick = () => {
-    if (bloq() || !confirm("Apagar TODAS as linhas ativas (sem arquivar)?")) return;
-    const b = db.batch(); ativos.forEach(a => b.delete(db.collection("docas_carregamentos").doc(a.id))); b.commit();
+  $("cf-add").onclick = () => {
+    if (bloq()) return;
+    $("cf-t").value.split(/\n|;/).map(s => s.trim().toUpperCase()).filter(Boolean).forEach(n => db.collection("docas_filiais").doc(norm(n)).set({ nome: n }));
+    $("cf-t").value = "";
+  };
+  $("cd-add").onclick = () => {
+    const a = +$("cd-a").value, b = +$("cd-b").value; if (bloq() || !a || b < a) return;
+    for (let i = a; i <= b; i++) db.collection("docas_docas").doc("DOCA" + i).set({ nome: "DOCA " + i });
   };
   $("cb-salvar").onclick = () => {
     if (bloq()) return;
     const p = $("cb-placa").value.trim().toUpperCase(), n = id => parseFloat($(id).value.replace(",", "."));
     const c = n("cb-c"), a = n("cb-a"), l = n("cb-l");
-    if (!/^[A-Z]{3}-?[0-9][A-Z0-9][0-9]{2}$/.test(p) || !(c && a && l)) { alert("Informe placa válida e as 3 medidas."); return; }
+    if (!/^[A-Z]{3}-?[0-9][A-Z0-9][0-9]{2}$/.test(p) || !(c && a && l)) return alert("Informe placa válida e as 3 medidas.");
     const pl = norm(p), placa = pl.slice(0, 3) + "-" + pl.slice(3);
     db.collection("cubagem_veiculos").doc(pl).set({ placa, cubagem: +(c * a * l).toFixed(3), pallets: Math.floor(c / 1.2) * 2 })
       .then(() => ["cb-placa", "cb-c", "cb-a", "cb-l"].forEach(i => $(i).value = ""));
