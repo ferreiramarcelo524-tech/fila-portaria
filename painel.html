@@ -1066,7 +1066,7 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:12px;bor
     4: "152:20,634:21,126:22,132:23,133:24,24:25,URUARÁ:12,BELÉM / 634:15",
     5: "129:20,CANAÃ:12"
   };
-  const DIAS = { 1: "Segunda", 2: "Terça", 3: "Quarta", 4: "Quinta", 5: "Sexta" };
+  const DIAS = { 1: "Segunda", 2: "Terça", 3: "Quarta", 4: "Quinta", 5: "Sexta", 6: "Sábado" };
   const TIPOS0 = [["ABASTECIMENTO", "#f7e092"], ["ELETRO", "#0b723b"], ["MATEUS PLUS", "#a30000"], ["TRANSFERENCIA", "#004d99"]];
   const $ = id => document.getElementById(id);
   const pad = n => String(n).padStart(2, "0");
@@ -1079,6 +1079,7 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:12px;bor
   const bloq = () => { if (!admin()) { alert("Acesso negado! Faça o login de administrador primeiro."); return true; } };
   const parse = k => (CAL0[k] || "").split(",").filter(Boolean).map(s => { const [f, d] = s.split(":"); return { f, d: "DOCA " + d }; });
   let ativos = [], tipos = [], filiais = [], docasL = [], fila = [], placas = [], cal = {}, hist = [], hPer = 7;
+  let sel = new Set(), carregou = false, calOk = false, hView = "lista", calRows = 12;
   let dataSel = iso(new Date()), rDia = 0, rMes = 0, mesMostrado = 0, atraso = 0;
 
   // ---------- UI ----------
@@ -1106,15 +1107,17 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:12px;bor
         <button class="btn-action btn-done" id="dc-fim" style="margin:0">Expedição finalizada</button></div></div>
     <div class="stats-grid"><div class="stat-card"><div class="stat-numero" id="dc-dia">-</div><div class="stat-label">Faturamento do dia</div></div>
     <div class="stat-card"><div class="stat-numero" id="dc-mes">-</div><div class="stat-label">Faturamento do mês (só finalizados)</div></div></div>
-    <table><thead><tr><th>Tipo</th><th>Filial</th><th>Doca</th><th>Valor</th><th>Veículo (fila)</th><th>Data</th><th></th></tr></thead><tbody id="dc-corpo"></tbody></table>
+    <div class="periodo-seletor" style="margin-bottom:8px">Ordenar por <select id="o-col"><option value="manual">Manual</option><option value="filial">Filial</option><option value="doca">Doca</option><option value="valor">Maior valor</option></select>
+    Tipo primeiro <select id="o-tipo"></select><span id="dc-sel" style="font-weight:700;margin-left:auto;color:#0f52ba"></span></div>
+    <table><thead><tr><th></th><th>Tipo</th><th>Filial</th><th>Doca</th><th>Valor</th><th>Veículos (fila)</th><th>Data</th><th></th></tr></thead><tbody id="dc-corpo"></tbody></table>
     <div id="dc-vazio" class="empty-msg">Nenhum carregamento. Use os botões de dia ou "+ Linha".</div></section></div>
   <div class="dc-pane" id="p-his"><section class="card">
     <div class="card-header-flex" style="margin-bottom:8px;padding-bottom:8px"><h2>Histórico (guardado por 3 meses)</h2>
       <div class="periodo-seletor"><button class="periodo-btn active" data-per="7">7 dias</button><button class="periodo-btn" data-per="30">30 dias</button>
         <input type="date" id="h-i"><input type="date" id="h-f"><button class="periodo-btn" data-per="esp">Buscar período</button>
-        <input type="text" id="h-q" class="input-busca" style="min-width:200px" placeholder="Buscar filial, doca, veículo, tipo..."></div></div>
+        <select id="h-view"><option value="lista">Lista</option><option value="dia">Por dia</option><option value="cal">Calendário</option><option value="rank">Ranking de lojas</option></select><input type="text" id="h-q" class="input-busca" style="min-width:200px" placeholder="Buscar filial, doca, veículo, tipo..."></div></div>
     <div id="h-tot" style="font-weight:700;margin-bottom:6px"></div>
-    <table><thead><tr><th>Tipo</th><th>Filial</th><th>Doca</th><th>Valor</th><th>Veículo</th><th>Data</th><th>Finalizado em</th><th></th></tr></thead><tbody id="h-corpo"></tbody></table>
+    <div id="h-alt"></div><table id="h-tab"><thead><tr><th>Tipo</th><th>Filial</th><th>Doca</th><th>Valor</th><th>Veículo</th><th>Data</th><th>Finalizado em</th><th></th></tr></thead><tbody id="h-corpo"></tbody></table>
     <div id="h-vazio" class="empty-msg">Nenhum registro no período.</div>
     <p style="font-size:.75rem;color:#7d8da4;margin:8px 0 0">O contador mensal zera sozinho na virada do mês. Editar valor ou data aqui ajusta os totais automaticamente.</p></section></div>
   <div class="dc-pane" id="p-cad">
@@ -1125,7 +1128,7 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:12px;bor
     <table style="margin-top:8px"><thead><tr><th>Placa</th><th>Cubagem m³</th><th>Pallets</th><th></th></tr></thead><tbody id="cb-corpo"></tbody></table></section></div>
   <div class="dc-pane" id="p-cal"><section class="card"><h2>Calendário de abastecimento</h2>
     <p style="font-size:.8rem;color:#7d8da4;margin:0 0 8px">Digite a filial (ex: 193 vira LOJA 193) e a doca de cada dia. Os botões de dia usam este calendário.</p>
-    <div style="overflow-x:auto"><table id="cal-t"></table></div></section></div>
+    <button class="btn-action btn-add" data-more="1">+ Linhas</button><div style="overflow-x:auto;margin-top:6px"><table id="cal-t"></table></div></section></div>
   <datalist id="dl-f"></datalist><datalist id="dl-d"></datalist>`;
   document.querySelector(".container").appendChild(sec);
   $("dc-data").value = dataSel; $("dc-data").onchange = e => { dataSel = e.target.value || dataSel; };
@@ -1166,7 +1169,7 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:12px;bor
 
   // ---------- Dados ----------
   db.collection("docas_carregamentos").onSnapshot(s => {
-    ativos = s.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => (a.ordem || 0) - (b.ordem || 0)); desenhar(); totais();
+    ativos = s.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => (a.ordem || 0) - (b.ordem || 0)); carregou = true; desenhar(); totais(); autoPreencher();
   });
   const hoje = iso(new Date());
   db.doc("docas_resumo/dia_" + hoje).onSnapshot(d => { rDia = d.exists ? d.data().total || 0 : 0; totais(); });
@@ -1175,6 +1178,7 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:12px;bor
     tipos = s.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => a.nome.localeCompare(b.nome));
     if (!tipos.length && admin()) TIPOS0.forEach(([n, c]) => db.collection("docas_tipos").doc(norm(n)).set({ nome: n, cor: c }));
     $("l-tipos").innerHTML = tipos.map(t => `<span class="chip" style="background:${t.cor};color:${lum(t.cor)}">${esc(t.nome)} <input type="color" data-tc="${t.id}" value="${t.cor}" style="padding:0;width:26px;height:20px"><b data-delc="docas_tipos|${t.id}">✕</b></span>`).join("");
+    $("o-tipo").innerHTML = '<option value="">— nenhum —</option>' + tipos.map(t => `<option>${esc(t.nome)}</option>`).join("");
     desenhar(); desenharHist();
   });
   const lista = (col, arr, el, dl) => db.collection(col).onSnapshot(s => {
@@ -1184,7 +1188,7 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:12px;bor
     $(dl).innerHTML = arr.map(x => `<option value="${esc(x.nome)}">`).join("");
   });
   lista("docas_filiais", filiais, "l-filiais", "dl-f"); lista("docas_docas", docasL, "l-docas", "dl-d");
-  db.collection("docas_calendario").onSnapshot(s => { s.forEach(d => cal[d.id] = d.data().itens || []); desenharCal(); });
+  db.collection("docas_calendario").onSnapshot(s => { s.forEach(d => cal[d.id] = d.data().itens || []); calOk = true; desenharCal(); autoPreencher(); });
   db.collection("fila_patio").where("status", "==", "Aguardando").onSnapshot(s => {
     fila = s.docs.map(d => d.data()).sort((a, b) => (a.timestampChegada || 0) - (b.timestampChegada || 0)).map(d => d.placa).filter(Boolean); desenhar();
   });
@@ -1196,27 +1200,72 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:12px;bor
   // ---------- Carregamentos ----------
   let pend = false;
   const editando = () => { const a = document.activeElement; return a && a.closest && a.closest("#tab-docas") && /INPUT|SELECT|TEXTAREA/.test(a.tagName); };
-  function desenhar() {
-    if (editando()) { pend = true; return; }
+  function somaSel() {
+    const l = ativos.filter(a => sel.has(a.id));
+    $("dc-sel").textContent = l.length ? `Selecionadas: ${l.length} · Soma: ${BRL(l.reduce((s, x) => s + (+x.valor || 0), 0))}` : "";
+  }
+  function ordenados() {
+    const c = $("o-col").value, tp = $("o-tipo").value, cmp = (k) => (a, b) => String(a[k] || "").localeCompare(String(b[k] || ""), "pt", { numeric: true });
+    const f = { manual: () => 0, filial: cmp("filial"), doca: cmp("doca"), valor: (a, b) => (b.valor || 0) - (a.valor || 0) }[c];
+    return [...ativos].sort((a, b) => ((tp && b.tipo === tp ? 1 : 0) - (tp && a.tipo === tp ? 1 : 0)) || f(a, b));
+  }
+  function desenhar(f) {
+    if (!f && editando()) { pend = true; return; }
     $("dc-vazio").style.display = ativos.length ? "none" : "block";
-    $("dc-corpo").innerHTML = ativos.map(x => {
+    const usados = new Set(ativos.flatMap(a => (a.veiculo || "").split(",").map(s => s.trim()).filter(Boolean)));
+    const livres = fila.filter(p => !usados.has(p));
+    $("dc-corpo").innerHTML = ordenados().map(x => {
       const cor = (tipos.find(t => t.nome === x.tipo) || {}).cor || "#fff";
-      const vs = [...new Set([x.veiculo, ...fila].filter(Boolean))];
-      return `<tr data-id="${x.id}">
+      const vs = (x.veiculo || "").split(",").map(s => s.trim()).filter(Boolean);
+      return `<tr data-id="${x.id}"><td><input type="checkbox" data-sel="${x.id}"${sel.has(x.id) ? " checked" : ""}></td>
       <td><select data-f="tipo" style="background:${cor};color:${lum(cor)};font-weight:700">${tipos.map(t => `<option${t.nome === x.tipo ? " selected" : ""}>${esc(t.nome)}</option>`).join("")}</select></td>
       <td><input data-f="filial" list="dl-f" value="${esc(x.filial)}" style="width:140px"></td>
-      <td><input data-f="doca" list="dl-d" value="${esc(x.doca)}" style="width:100px"></td>
-      <td><input data-f="valor" value="${x.valor ? String(x.valor).replace(".", ",") : ""}" style="width:110px" placeholder="0,00"></td>
-      <td><select data-f="veiculo"><option value=""></option>${vs.map(v => `<option${v === x.veiculo ? " selected" : ""}>${esc(v)}</option>`).join("")}</select></td>
+      <td><input data-f="doca" list="dl-d" value="${esc(x.doca)}" style="width:130px"></td>
+      <td><input data-f="valor" value="${x.valor ? BRL(x.valor) : ""}" style="width:130px" placeholder="R$ 0,00"></td>
+      <td>${vs.map(p => `<span class="chip">${esc(p)}<b data-rv="${x.id}|${esc(p)}">✕</b></span>`).join("")}<select data-addv><option value="">+ veículo</option>${livres.map(p => `<option>${esc(p)}</option>`).join("")}</select></td>
       <td>${esc((x.data || "").split("-").reverse().join("/"))}</td>
       <td><button class="btn-action btn-done" data-fin="${x.id}">Finalizar</button><button class="btn-action btn-cancel" data-del="${x.id}">✕</button></td></tr>`;
     }).join("");
+    somaSel();
   }
+  $("o-col").onchange = $("o-tipo").onchange = () => desenhar(true);
+  $("dc-corpo").addEventListener("change", e => {
+    const t = e.target;
+    if (t.dataset.sel) { t.checked ? sel.add(t.dataset.sel) : sel.delete(t.dataset.sel); somaSel(); }
+    if (t.dataset.addv !== undefined && t.value && !bloq()) {
+      const id = t.closest("tr").dataset.id, x = ativos.find(a => a.id === id);
+      const l = (x.veiculo || "").split(",").map(s => s.trim()).filter(Boolean); l.push(t.value);
+      db.collection("docas_carregamentos").doc(id).update({ veiculo: l.join(", ") });
+    }
+  });
+  function preencher(k, data) {
+    const ex = new Set(ativos.map(a => norm(a.filial)));
+    const novos = itensDia(k).filter(it => !ex.has(norm(/^\d+$/.test(it.f) ? "LOJA " + it.f : it.f)));
+    if (!novos.length) return false;
+    const b = db.batch(); let o = Date.now();
+    novos.forEach(it => {
+      const loja = /^(LOJA )?\d+$/.test(it.f), n = it.f.replace(/^LOJA /, "");
+      b.set(db.collection("docas_carregamentos").doc(), {
+        tipo: loja ? "ABASTECIMENTO" : "ELETRO", filial: loja ? "LOJA " + n : it.f,
+        doca: /^\d+$/.test(it.d) ? "DOCA " + it.d : it.d, valor: 0, veiculo: "", data: data || dataSel, ordem: o++
+      });
+    });
+    b.commit().catch(x => alert(x.message)); return true;
+  }
+  async function autoPreencher() {
+    if (!carregou || !calOk || !admin() || ativos.length) return;
+    const k = new Date().getDay(); if (!k || !itensDia(k).length) return;
+    const ref = db.doc("docas_resumo/auto_" + iso(new Date()));
+    const ok = await db.runTransaction(async t => { const d = await t.get(ref); if (d.exists) return false; t.set(ref, { em: Date.now() }); return true; });
+    if (ok) preencher(k, iso(new Date()));
+  }
+  auth.onAuthStateChanged(() => autoPreencher());
   document.addEventListener("focusout", () => setTimeout(() => { if (pend && !editando()) { pend = false; desenhar(); desenharCal(); } }, 150));
   $("dc-corpo").addEventListener("change", e => {
     const f = e.target.dataset.f; if (!f || bloq()) return;
     let v = e.target.value.trim();
     if (f === "valor") v = parseFloat(v.replace(/[R$\s.]/g, "").replace(",", ".")) || 0;
+    if (f === "valor") e.target.value = v ? BRL(v) : "";
     if (f === "filial" || f === "doca") v = v.toUpperCase();
     db.collection("docas_carregamentos").doc(e.target.closest("tr").dataset.id).update({ [f]: v }).catch(x => alert(x.message));
   });
@@ -1256,25 +1305,48 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:12px;bor
     if (admin()) { const o = await db.collection("docas_historico").where("finalizadoEm", "<", Date.now() - 90 * 864e5).limit(400).get(); if (!o.empty) { const b = db.batch(); o.forEach(d => b.delete(d.ref)); b.commit(); } }
   }
   function desenharHist() {
-    const q = $("h-q").value.trim().toLowerCase();
+    const q = $("h-q").value.trim().toLowerCase(), v = $("h-view").value;
     const l = hist.filter(x => !q || [x.tipo, x.filial, x.doca, x.veiculo].join(" ").toLowerCase().includes(q));
     $("h-vazio").style.display = l.length ? "none" : "block";
     $("h-tot").textContent = l.length + " registros · Total: " + BRL(l.reduce((s, x) => s + (+x.valor || 0), 0));
-    $("h-corpo").innerHTML = l.map(x => {
-      const cor = (tipos.find(t => t.nome === x.tipo) || {}).cor || "#fff";
-      return `<tr data-id="${x.id}"><td><select data-f="tipo" style="background:${cor};color:${lum(cor)};font-weight:700">${tipos.map(t => `<option${t.nome === x.tipo ? " selected" : ""}>${esc(t.nome)}</option>`).join("")}${tipos.some(t => t.nome === x.tipo) ? "" : `<option selected>${esc(x.tipo)}</option>`}</select></td>
-      <td><input data-f="filial" list="dl-f" value="${esc(x.filial)}" style="width:130px"></td><td><input data-f="doca" list="dl-d" value="${esc(x.doca)}" style="width:95px"></td>
-      <td><input data-f="valor" value="${x.valor ? String(x.valor).replace(".", ",") : ""}" style="width:105px"></td><td><input data-f="veiculo" value="${esc(x.veiculo)}" style="width:90px"></td>
-      <td><input type="date" data-f="data" value="${esc(x.data)}"></td><td>${new Date(x.finalizadoEm).toLocaleString("pt-BR")}</td>
-      <td><button class="btn-action btn-cancel" data-delh="${x.id}">✕</button></td></tr>`;
-    }).join("");
+    $("h-tab").style.display = v === "lista" ? "" : "none";
+    const chip = x => { const c = (tipos.find(t => t.nome === x.tipo) || {}).cor || "#eef3fa"; return `<span class="chip" style="background:${c};color:${lum(c)}">${esc(x.filial)} · ${esc(x.doca)} · ${BRL(x.valor)}${x.veiculo ? " · " + esc(x.veiculo) : ""}</span>`; };
+    if (v === "lista") {
+      $("h-alt").innerHTML = "";
+      $("h-corpo").innerHTML = l.map(x => {
+        const cor = (tipos.find(t => t.nome === x.tipo) || {}).cor || "#fff";
+        return `<tr data-id="${x.id}"><td><select data-f="tipo" style="background:${cor};color:${lum(cor)};font-weight:700">${tipos.map(t => `<option${t.nome === x.tipo ? " selected" : ""}>${esc(t.nome)}</option>`).join("")}${tipos.some(t => t.nome === x.tipo) ? "" : `<option selected>${esc(x.tipo)}</option>`}</select></td>
+        <td><input data-f="filial" list="dl-f" value="${esc(x.filial)}" style="width:130px"></td><td><input data-f="doca" list="dl-d" value="${esc(x.doca)}" style="width:130px"></td>
+        <td><input data-f="valor" value="${x.valor ? BRL(x.valor) : ""}" style="width:130px"></td><td><input data-f="veiculo" value="${esc(x.veiculo)}" style="width:130px"></td>
+        <td><input type="date" data-f="data" value="${esc(x.data)}"></td><td>${new Date(x.finalizadoEm).toLocaleString("pt-BR")}</td>
+        <td><button class="btn-action btn-edit" data-ret="${x.id}" title="Devolver para Carregamentos">↩ Retornar</button><button class="btn-action btn-cancel" data-delh="${x.id}">✕</button></td></tr>`;
+      }).join("");
+    } else if (v === "dia") {
+      const g = {}; l.forEach(x => (g[x.data || "-"] = g[x.data || "-"] || []).push(x));
+      $("h-alt").innerHTML = Object.keys(g).sort().reverse().map(d => `<div style="border:1px solid #d5dfef;border-radius:8px;padding:8px 10px;margin-bottom:8px;background:#f8fbff"><b>${d.split("-").reverse().join("/")}</b> · ${g[d].length} carga(s) · <b style="color:#1d9d60">${BRL(g[d].reduce((s, x) => s + (+x.valor || 0), 0))}</b><div>${g[d].map(chip).join("")}</div></div>`).join("");
+    } else if (v === "cal") {
+      const meses = [...new Set(l.map(x => (x.data || "").slice(0, 7)).filter(Boolean))].sort().reverse();
+      $("h-alt").innerHTML = meses.map(m => {
+        const [a, mm] = m.split("-").map(Number), n = new Date(a, mm, 0).getDate(), off = new Date(a, mm - 1, 1).getDay(), tot = {}, qt = {};
+        l.filter(x => x.data.startsWith(m)).forEach(x => { const d = +x.data.slice(8); tot[d] = (tot[d] || 0) + (+x.valor || 0); qt[d] = (qt[d] || 0) + 1; });
+        let c = ""; for (let i = 0; i < off; i++) c += "<div></div>";
+        for (let d = 1; d <= n; d++) c += `<div style="background:${qt[d] ? "#eaf3ff" : "#f7f9fc"};border:1px solid #d5dfef;border-radius:6px;padding:5px;min-height:58px"><b>${d}</b>${qt[d] ? `<div style="color:#1d9d60;font-weight:700;font-size:.72rem">${BRL(tot[d])}</div><div style="font-size:.7rem">${qt[d]} carga(s)</div>` : ""}</div>`;
+        return `<h3 style="margin:8px 0 4px">${pad(mm)}/${a}</h3><div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px">${["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"].map(d => `<b style="text-align:center">${d}</b>`).join("")}${c}</div>`;
+      }).join("");
+    } else {
+      const r = {}; l.forEach(x => { const k = x.filial || "-"; r[k] = r[k] || { q: 0, v: 0 }; r[k].q++; r[k].v += +x.valor || 0; });
+      const o = Object.entries(r).sort((a, b) => b[1].v - a[1].v), mx = Math.max(1, ...o.map(e => e[1].v));
+      $("h-alt").innerHTML = `<table><thead><tr><th>Pos.</th><th>Filial</th><th>Cargas</th><th>Valor total</th><th>Média</th><th style="width:30%"></th></tr></thead><tbody>${o.map(([k, d], i) => `<tr><td>${i + 1}º</td><td><b>${esc(k)}</b></td><td>${d.q}</td><td>${BRL(d.v)}</td><td>${BRL(d.v / d.q)}</td><td><div style="background:linear-gradient(90deg,#168cff,#0f52ba);height:10px;border-radius:5px;width:${d.v / mx * 100}%"></div></td></tr>`).join("")}</tbody></table>`;
+    }
   }
+  $("h-view").onchange = desenharHist;
   $("h-q").oninput = desenharHist;
   $("h-corpo").addEventListener("change", e => {
     const f = e.target.dataset.f; if (!f || bloq()) return;
     const x = hist.find(h => h.id === e.target.closest("tr").dataset.id); if (!x) return;
     let v = e.target.value.trim();
     if (f === "valor") v = parseFloat(v.replace(/[R$\s.]/g, "").replace(",", ".")) || 0;
+    if (f === "valor") e.target.value = v ? BRL(v) : "";
     if (f === "filial" || f === "doca" || f === "veiculo") v = v.toUpperCase();
     if (f === "valor") ajusta(x.data, v - (+x.valor || 0));
     if (f === "data" && v) { ajusta(x.data, -(+x.valor || 0)); ajusta(v, +x.valor || 0); }
@@ -1284,11 +1356,12 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:12px;bor
   // ---------- Calendário ----------
   function desenharCal() {
     if (editando()) { pend = true; return; }
-    let h = "<thead><tr>" + Object.keys(DIAS).map(k => `<th>${DIAS[k]}</th>`).join("") + "</tr></thead><tbody>";
-    for (let r = 0; r < 12; r++) {
-      h += "<tr>" + Object.keys(DIAS).map(k => {
+    const ks = Object.keys(DIAS), rows = Math.max(calRows, ...ks.map(k => itensDia(k).length + 2));
+    let h = "<thead><tr>" + ks.map(k => `<th>${DIAS[k]}</th>`).join("") + "</tr></thead><tbody>";
+    for (let r = 0; r < rows; r++) {
+      h += "<tr>" + ks.map(k => {
         const it = itensDia(k)[r] || { f: "", d: "" };
-        return `<td style="white-space:nowrap"><input data-cf="${k}" value="${esc(it.f)}" style="width:105px" placeholder="filial"><input data-cd="${k}" list="dl-d" value="${esc(it.d)}" style="width:80px" placeholder="doca"></td>`;
+        return `<td style="white-space:nowrap"><input data-cf="${k}" value="${esc(it.f)}" style="width:115px" placeholder="filial"><input data-cd="${k}" list="dl-d" value="${esc(it.d)}" style="width:125px" placeholder="doca"></td>`;
       }).join("") + "</tr>";
     }
     $("cal-t").innerHTML = h + "</tbody>";
@@ -1323,19 +1396,19 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:12px;bor
       await db.collection("docas_historico").doc(x.id).delete(); hist = hist.filter(h => h !== x); desenharHist();
     }
     if (t.dataset.delc && !bloq()) { const [c, id] = t.dataset.delc.split("|"); db.collection(c).doc(id).delete(); }
-    if (t.dataset.dia) {
-      if (bloq()) return;
-      if (ativos.length && !confirm("Substituir a lista atual pela de " + DIAS[t.dataset.dia] + "?")) return;
-      const b = db.batch();
-      ativos.forEach(a => b.delete(db.collection("docas_carregamentos").doc(a.id)));
-      itensDia(t.dataset.dia).forEach((it, i) => {
-        const loja = /^(LOJA )?\d+$/.test(it.f), n = it.f.replace(/^LOJA /, "");
-        b.set(db.collection("docas_carregamentos").doc(), {
-          tipo: loja ? "ABASTECIMENTO" : "ELETRO", filial: loja ? "LOJA " + n : it.f,
-          doca: /^\d+$/.test(it.d) ? "DOCA " + it.d : it.d, valor: 0, veiculo: "", data: dataSel, ordem: i + 1
-        });
-      });
-      b.commit().catch(x => alert(x.message));
+    if (t.dataset.dia) { if (bloq()) return; if (!preencher(t.dataset.dia)) alert("Nenhuma filial nova: tudo deste dia já está na lista."); }
+    if (t.dataset.more) { calRows += 4; desenharCal(); }
+    if (t.dataset.rv && !bloq()) {
+      const [id, pl] = t.dataset.rv.split("|"), x = ativos.find(a => a.id === id);
+      db.collection("docas_carregamentos").doc(id).update({ veiculo: (x.veiculo || "").split(",").map(s => s.trim()).filter(p => p && p !== pl).join(", ") });
+    }
+    if (t.dataset.ret) {
+      const x = hist.find(h => h.id === t.dataset.ret);
+      if (!x || bloq() || !confirm("Retornar esta carga para Carregamentos? O valor sai do mensal.")) return;
+      const { finalizadoEm, id, ...r } = x; ajusta(x.data, -(+x.valor || 0));
+      const b = db.batch(); b.set(db.collection("docas_carregamentos").doc(x.id), { ...r, ordem: Date.now() });
+      b.delete(db.collection("docas_historico").doc(x.id)); await b.commit();
+      hist = hist.filter(h => h !== x); desenharHist();
     }
   });
   sec.addEventListener("change", e => {
