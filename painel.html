@@ -1079,7 +1079,7 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:12px;bor
   const bloq = () => { if (!admin()) { alert("Acesso negado! Faça o login de administrador primeiro."); return true; } };
   const parse = k => (CAL0[k] || "").split(",").filter(Boolean).map(s => { const [f, d] = s.split(":"); return { f, d: "DOCA " + d }; });
   let ativos = [], tipos = [], filiais = [], docasL = [], fila = [], placas = [], cal = {}, hist = [], hPer = 7;
-  let sel = new Set(), carregou = false, calOk = false, hView = "lista", calRows = 12;
+  let filaMap = {}, sel = new Set(), carregou = false, calOk = false, hView = "lista", calRows = 12;
   let dataSel = iso(new Date()), rDia = 0, rMes = 0, mesMostrado = 0, atraso = 0;
 
   // ---------- UI ----------
@@ -1106,14 +1106,14 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:12px;bor
         <button class="btn-action btn-add" id="dc-add" style="margin:0">+ Linha</button>
         <button class="btn-action btn-done" id="dc-fim" style="margin:0">Expedição finalizada</button></div></div>
     <div class="stats-grid"><div class="stat-card"><div class="stat-numero" id="dc-dia">-</div><div class="stat-label">Faturamento do dia</div></div>
-    <div class="stat-card"><div class="stat-numero" id="dc-mes">-</div><div class="stat-label">Faturamento do mês (só finalizados)</div></div></div>
+    <div class="stat-card"><div class="stat-numero" id="dc-mes">-</div><div class="stat-label">Faturamento do mês (só finalizados) <button class="btn-action btn-edit" id="dc-adj" style="margin:0 0 0 6px;padding:2px 8px">± Ajustar</button></div></div></div>
     <div class="periodo-seletor" style="margin-bottom:8px">Ordenar por <select id="o-col"><option value="manual">Manual</option><option value="filial">Filial</option><option value="doca">Doca</option><option value="valor">Maior valor</option></select>
     Tipo primeiro <select id="o-tipo"></select><span id="dc-sel" style="font-weight:700;margin-left:auto;color:#0f52ba"></span></div>
     <table><thead><tr><th></th><th>Tipo</th><th>Filial</th><th>Doca</th><th>Valor</th><th>Veículos (fila)</th><th>Data</th><th></th></tr></thead><tbody id="dc-corpo"></tbody></table>
     <div id="dc-vazio" class="empty-msg">Nenhum carregamento. Use os botões de dia ou "+ Linha".</div></section></div>
   <div class="dc-pane" id="p-his"><section class="card">
     <div class="card-header-flex" style="margin-bottom:8px;padding-bottom:8px"><h2>Histórico (guardado por 3 meses)</h2>
-      <div class="periodo-seletor"><button class="periodo-btn active" data-per="7">7 dias</button><button class="periodo-btn" data-per="30">30 dias</button>
+      <div class="periodo-seletor"><button class="periodo-btn active" data-per="7">7 dias</button><button class="periodo-btn" data-per="30">30 dias</button><button class="periodo-btn" data-per="mes">Mês atual</button>
         <input type="date" id="h-i"><input type="date" id="h-f"><button class="periodo-btn" data-per="esp">Buscar período</button>
         <select id="h-view"><option value="lista">Lista</option><option value="dia">Por dia</option><option value="cal">Calendário</option><option value="rank">Ranking de lojas</option></select><input type="text" id="h-q" class="input-busca" style="min-width:200px" placeholder="Buscar filial, doca, veículo, tipo..."></div></div>
     <div id="h-tot" style="font-weight:700;margin-bottom:6px"></div>
@@ -1189,8 +1189,10 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:12px;bor
   });
   lista("docas_filiais", filiais, "l-filiais", "dl-f"); lista("docas_docas", docasL, "l-docas", "dl-d");
   db.collection("docas_calendario").onSnapshot(s => { s.forEach(d => cal[d.id] = d.data().itens || []); calOk = true; desenharCal(); autoPreencher(); });
-  db.collection("fila_patio").where("status", "==", "Aguardando").onSnapshot(s => {
-    fila = s.docs.map(d => d.data()).sort((a, b) => (a.timestampChegada || 0) - (b.timestampChegada || 0)).map(d => d.placa).filter(Boolean); desenhar();
+  db.collection("fila_patio").where("status", "in", ["Aguardando", "Em Doca"]).onSnapshot(s => {
+    const m = {};
+    s.docs.forEach(d => { const x = { id: d.id, ...d.data() }; if (!x.placa) return; const k = norm(x.placa); if (!m[k] || (x.timestampChegada || 0) > (m[k].timestampChegada || 0)) m[k] = x; });
+    filaMap = m; desenhar();
   });
   db.collection("cubagem_veiculos").onSnapshot(s => {
     placas = s.docs.map(d => d.data()).sort((a, b) => a.placa.localeCompare(b.placa));
@@ -1200,6 +1202,31 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:12px;bor
   // ---------- Carregamentos ----------
   let pend = false;
   const editando = () => { const a = document.activeElement; return a && a.closest && a.closest("#tab-docas") && /INPUT|SELECT|TEXTAREA/.test(a.tagName); };
+  const chave = f => norm(f).replace(/^LOJA/, "");
+  function chipVeic(id, p, rem) {
+    const v = filaMap[norm(p)], st = v ? v.status : "", cor = st === "Em Doca" ? "#ffd9a8" : st === "Aguardando" ? "#cfe6ff" : "#e6e9ef";
+    return `<span class="chip" style="background:${cor}" title="${st || "fora do pátio"}">${st === "Em Doca" ? "🚛 " : ""}${esc(p)}${rem ? `<b data-rv="${id}|${esc(p)}">✕</b>` : ""}</span>`;
+  }
+  function celVeic(x, usados) {
+    const vs = (x.veiculo || "").split(",").map(s => s.trim()).filter(Boolean), todos = Object.values(filaMap);
+    const der = todos.filter(v => v.status === "Em Doca" && x.filial && chave(v.filial) === chave(x.filial) && !vs.includes(v.placa)).map(v => v.placa);
+    const livre = v => !usados.has(v.placa) && !der.includes(v.placa);
+    return vs.map(p => chipVeic(x.id, p, true)).join("") + der.map(p => chipVeic(x.id, p, false)).join("") +
+      `<select data-addv><option value="">+ veículo</option><optgroup label="Disponíveis (aguardando)">${todos.filter(v => v.status === "Aguardando" && livre(v)).map(v => `<option value="${esc(v.placa)}">${esc(v.placa)}</option>`).join("")}</optgroup><optgroup label="Em doca">${todos.filter(v => v.status === "Em Doca" && livre(v)).map(v => `<option value="${esc(v.placa)}">🚛 ${esc(v.placa)} (${esc(v.doca || "-")})</option>`).join("")}</optgroup></select>`;
+  }
+  async function addVeic(id, placa) {
+    if (document.activeElement) document.activeElement.blur();
+    const x = ativos.find(a => a.id === id), v = filaMap[norm(placa)];
+    if (v && v.status === "Aguardando") {
+      const f = prompt("Para qual Filial o veículo vai?", x.filial || ""); if (!f) return desenhar(true);
+      const d = prompt("Número da Doca:", x.doca || ""); if (!d) return desenhar(true);
+      const c = prompt("Nome do Conferente:"); if (!c) return desenhar(true);
+      try { await db.collection("fila_patio").doc(v.id).update({ status: "Em Doca", filial: f, doca: d, conferente: c, timestampChamada: Date.now() }); }
+      catch (er) { alert("Erro ao chamar o veículo: " + er.message); return desenhar(true); }
+    }
+    const l = (x.veiculo || "").split(",").map(s => s.trim()).filter(Boolean); l.push(placa);
+    db.collection("docas_carregamentos").doc(id).update({ veiculo: l.join(", ") });
+  }
   function somaSel() {
     const l = ativos.filter(a => sel.has(a.id));
     $("dc-sel").textContent = l.length ? `Selecionadas: ${l.length} · Soma: ${BRL(l.reduce((s, x) => s + (+x.valor || 0), 0))}` : "";
@@ -1213,7 +1240,6 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:12px;bor
     if (!f && editando()) { pend = true; return; }
     $("dc-vazio").style.display = ativos.length ? "none" : "block";
     const usados = new Set(ativos.flatMap(a => (a.veiculo || "").split(",").map(s => s.trim()).filter(Boolean)));
-    const livres = fila.filter(p => !usados.has(p));
     $("dc-corpo").innerHTML = ordenados().map(x => {
       const cor = (tipos.find(t => t.nome === x.tipo) || {}).cor || "#fff";
       const vs = (x.veiculo || "").split(",").map(s => s.trim()).filter(Boolean);
@@ -1222,7 +1248,7 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:12px;bor
       <td><input data-f="filial" list="dl-f" value="${esc(x.filial)}" style="width:140px"></td>
       <td><input data-f="doca" list="dl-d" value="${esc(x.doca)}" style="width:130px"></td>
       <td><input data-f="valor" value="${x.valor ? BRL(x.valor) : ""}" style="width:130px" placeholder="R$ 0,00"></td>
-      <td>${vs.map(p => `<span class="chip">${esc(p)}<b data-rv="${x.id}|${esc(p)}">✕</b></span>`).join("")}<select data-addv><option value="">+ veículo</option>${livres.map(p => `<option>${esc(p)}</option>`).join("")}</select></td>
+      <td>${celVeic(x, usados)}</td>
       <td>${esc((x.data || "").split("-").reverse().join("/"))}</td>
       <td><button class="btn-action btn-done" data-fin="${x.id}">Finalizar</button><button class="btn-action btn-cancel" data-del="${x.id}">✕</button></td></tr>`;
     }).join("");
@@ -1232,11 +1258,7 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:12px;bor
   $("dc-corpo").addEventListener("change", e => {
     const t = e.target;
     if (t.dataset.sel) { t.checked ? sel.add(t.dataset.sel) : sel.delete(t.dataset.sel); somaSel(); }
-    if (t.dataset.addv !== undefined && t.value && !bloq()) {
-      const id = t.closest("tr").dataset.id, x = ativos.find(a => a.id === id);
-      const l = (x.veiculo || "").split(",").map(s => s.trim()).filter(Boolean); l.push(t.value);
-      db.collection("docas_carregamentos").doc(id).update({ veiculo: l.join(", ") });
-    }
+    if (t.dataset.addv !== undefined && t.value && !bloq()) addVeic(t.closest("tr").dataset.id, t.value);
   });
   function preencher(k, data) {
     const ex = new Set(ativos.map(a => norm(a.filial)));
@@ -1299,7 +1321,7 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:12px;bor
   async function carregarHist() {
     let i, f = Date.now();
     if (hPer === "esp") { if (!$("h-i").value || !$("h-f").value) return alert("Escolha as datas inicial e final."); i = new Date($("h-i").value + "T00:00:00").getTime(); f = new Date($("h-f").value + "T23:59:59").getTime(); }
-    else i = f - hPer * 864e5;
+    else if (hPer === "mes") { const n = new Date(); i = new Date(n.getFullYear(), n.getMonth(), 1).getTime(); } else i = f - hPer * 864e5;
     const s = await db.collection("docas_historico").where("finalizadoEm", ">=", i).where("finalizadoEm", "<=", f).get();
     hist = s.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => b.finalizadoEm - a.finalizadoEm); desenharHist();
     if (admin()) { const o = await db.collection("docas_historico").where("finalizadoEm", "<", Date.now() - 90 * 864e5).limit(400).get(); if (!o.empty) { const b = db.batch(); o.forEach(d => b.delete(d.ref)); b.commit(); } }
@@ -1325,21 +1347,25 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:12px;bor
       const g = {}; l.forEach(x => (g[x.data || "-"] = g[x.data || "-"] || []).push(x));
       $("h-alt").innerHTML = Object.keys(g).sort().reverse().map(d => `<div style="border:1px solid #d5dfef;border-radius:8px;padding:8px 10px;margin-bottom:8px;background:#f8fbff"><b>${d.split("-").reverse().join("/")}</b> · ${g[d].length} carga(s) · <b style="color:#1d9d60">${BRL(g[d].reduce((s, x) => s + (+x.valor || 0), 0))}</b><div>${g[d].map(chip).join("")}</div></div>`).join("");
     } else if (v === "cal") {
-      const meses = [...new Set(l.map(x => (x.data || "").slice(0, 7)).filter(Boolean))].sort().reverse();
+      const dts = l.filter(x => x.data), meses = [...new Set(dts.map(x => x.data.slice(0, 7)))].sort().reverse();
       $("h-alt").innerHTML = meses.map(m => {
         const [a, mm] = m.split("-").map(Number), n = new Date(a, mm, 0).getDate(), off = new Date(a, mm - 1, 1).getDay(), tot = {}, qt = {};
-        l.filter(x => x.data.startsWith(m)).forEach(x => { const d = +x.data.slice(8); tot[d] = (tot[d] || 0) + (+x.valor || 0); qt[d] = (qt[d] || 0) + 1; });
+        const doMes = dts.filter(x => x.data.startsWith(m));
+        doMes.forEach(x => { const d = +x.data.slice(8, 10); tot[d] = (tot[d] || 0) + (+x.valor || 0); qt[d] = (qt[d] || 0) + 1; });
         let c = ""; for (let i = 0; i < off; i++) c += "<div></div>";
-        for (let d = 1; d <= n; d++) c += `<div style="background:${qt[d] ? "#eaf3ff" : "#f7f9fc"};border:1px solid #d5dfef;border-radius:6px;padding:5px;min-height:58px"><b>${d}</b>${qt[d] ? `<div style="color:#1d9d60;font-weight:700;font-size:.72rem">${BRL(tot[d])}</div><div style="font-size:.7rem">${qt[d]} carga(s)</div>` : ""}</div>`;
-        return `<h3 style="margin:8px 0 4px">${pad(mm)}/${a}</h3><div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px">${["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"].map(d => `<b style="text-align:center">${d}</b>`).join("")}${c}</div>`;
-      }).join("");
+        for (let d = 1; d <= n; d++) c += `<div data-dia-h="${m}-${pad(d)}" style="cursor:${qt[d] ? "pointer" : "default"};background:${qt[d] ? "#eaf3ff" : "#f7f9fc"};border:1px solid #d5dfef;border-radius:6px;padding:4px;min-height:56px;overflow:hidden"><b style="font-size:.8rem">${d}</b>${qt[d] ? `<div style="color:#1d9d60;font-weight:700;font-size:.68rem;word-break:break-all">${BRL(tot[d])}</div><div style="font-size:.66rem">${qt[d]} carga(s)</div>` : ""}</div>`;
+        return `<h3 style="margin:10px 0 4px">${pad(mm)}/${a} · ${BRL(doMes.reduce((s, x) => s + (+x.valor || 0), 0))}</h3><div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px">${["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"].map(d => `<b style="text-align:center;font-size:.75rem">${d}</b>`).join("")}${c}</div>`;
+      }).join("") + `<div id="h-dia" style="margin-top:10px"></div>`;
     } else {
       const r = {}; l.forEach(x => { const k = x.filial || "-"; r[k] = r[k] || { q: 0, v: 0 }; r[k].q++; r[k].v += +x.valor || 0; });
       const o = Object.entries(r).sort((a, b) => b[1].v - a[1].v), mx = Math.max(1, ...o.map(e => e[1].v));
       $("h-alt").innerHTML = `<table><thead><tr><th>Pos.</th><th>Filial</th><th>Cargas</th><th>Valor total</th><th>Média</th><th style="width:30%"></th></tr></thead><tbody>${o.map(([k, d], i) => `<tr><td>${i + 1}º</td><td><b>${esc(k)}</b></td><td>${d.q}</td><td>${BRL(d.v)}</td><td>${BRL(d.v / d.q)}</td><td><div style="background:linear-gradient(90deg,#168cff,#0f52ba);height:10px;border-radius:5px;width:${d.v / mx * 100}%"></div></td></tr>`).join("")}</tbody></table>`;
     }
   }
-  $("h-view").onchange = desenharHist;
+  $("h-view").onchange = () => {
+    if ($("h-view").value === "cal" && hPer !== "esp" && hPer !== "mes") { hPer = "mes"; sec.querySelectorAll("[data-per]").forEach(b => b.classList.toggle("active", b.dataset.per === "mes")); carregarHist(); }
+    else desenharHist();
+  };
   $("h-q").oninput = desenharHist;
   $("h-corpo").addEventListener("change", e => {
     const f = e.target.dataset.f; if (!f || bloq()) return;
@@ -1382,7 +1408,7 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:12px;bor
       if (t.dataset.sub === "his") carregarHist(); if (t.dataset.sub === "cal") desenharCal();
     }
     if (t.dataset.per) {
-      hPer = t.dataset.per === "esp" ? "esp" : +t.dataset.per;
+      hPer = isNaN(+t.dataset.per) ? t.dataset.per : +t.dataset.per;
       sec.querySelectorAll("[data-per]").forEach(b => b.classList.toggle("active", b === t)); carregarHist();
     }
     if (t.dataset.fin) {
@@ -1396,6 +1422,11 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:12px;bor
       await db.collection("docas_historico").doc(x.id).delete(); hist = hist.filter(h => h !== x); desenharHist();
     }
     if (t.dataset.delc && !bloq()) { const [c, id] = t.dataset.delc.split("|"); db.collection(c).doc(id).delete(); }
+    const cel = t.closest && t.closest("[data-dia-h]");
+    if (cel) {
+      const d = cel.dataset.diaH, l = hist.filter(x => x.data === d);
+      $("h-dia").innerHTML = `<b>${d.split("-").reverse().join("/")}</b> · ${BRL(l.reduce((s, x) => s + (+x.valor || 0), 0))}<div>${l.map(x => `<span class="chip">${esc(x.filial)} · ${esc(x.doca)} · ${BRL(x.valor)}${x.veiculo ? " · " + esc(x.veiculo) : ""}</span>`).join("")}</div>`;
+    }
     if (t.dataset.dia) { if (bloq()) return; if (!preencher(t.dataset.dia)) alert("Nenhuma filial nova: tudo deste dia já está na lista."); }
     if (t.dataset.more) { calRows += 4; desenharCal(); }
     if (t.dataset.rv && !bloq()) {
@@ -1415,6 +1446,13 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:12px;bor
     if (e.target.dataset.tc && !bloq()) db.collection("docas_tipos").doc(e.target.dataset.tc).update({ cor: e.target.value });
   });
 
+  $("dc-adj").onclick = () => {
+    if (bloq()) return;
+    const r = prompt("Valor a somar ao mês (negativo para diminuir). Ex: 1500,00 ou -300,00"); if (r === null) return;
+    const v = parseFloat(r.replace(/[R$\s.]/g, "").replace(",", ".")); if (!v) return alert("Valor inválido.");
+    const m = prompt("Motivo (opcional):") || ""; atraso = 1;
+    db.doc("docas_resumo/mes_" + hoje.slice(0, 7)).set({ total: F.increment(v), ajustes: F.arrayUnion({ v, motivo: m, em: Date.now() }) }, { merge: true }).catch(er => alert(er.message));
+  };
   // ---------- Cadastros ----------
   $("ct-add").onclick = () => {
     const n = $("ct-n").value.trim().toUpperCase(); if (bloq() || !n) return;
