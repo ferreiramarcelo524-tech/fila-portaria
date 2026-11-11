@@ -1252,7 +1252,7 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:12px;bor
       <td><input data-f="doca" list="dl-d" value="${esc(x.doca)}" style="width:130px"></td>
       <td><input data-f="valor" value="${x.valor ? BRL(x.valor) : ""}" style="width:130px" placeholder="R$ 0,00"></td>
       <td>${celVeic(x, usados)}</td>
-      <td>${esc((x.data || "").split("-").reverse().join("/"))}</td>
+      <td style="${x.data !== iso(new Date()) ? "color:#e67e22;font-weight:700" : ""}" title="${x.data !== iso(new Date()) ? "Data diferente de hoje (ao finalizar vale a data de hoje)" : ""}">${esc((x.data || "").split("-").reverse().join("/"))}</td>
       <td><button class="btn-action btn-done" data-fin="${x.id}">Finalizar</button><button class="btn-action btn-cancel" data-del="${x.id}">✕</button></td></tr>`;
     }).join("");
     somaSel();
@@ -1308,9 +1308,9 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:12px;bor
   function arquivar(lote, b) {
     let soma = 0; const vi = new Map();
     lote.forEach(x => {
-      const v = +x.valor || 0, todos = veicAtivos(x); soma += v; ajusta(x.data || iso(new Date()), v);
+      const dt = iso(new Date()), v = +x.valor || 0, todos = veicAtivos(x); soma += v; ajusta(dt, v);
       todos.forEach(p => { const f = filaMap[norm(p)]; if (f && f.status === "Em Doca") vi.set(f.id, f); });
-      b.set(db.collection("docas_historico").doc(x.id), { ...x, veiculo: todos.join(", "), data: x.data || iso(new Date()), finalizadoEm: Date.now() });
+      b.set(db.collection("docas_historico").doc(x.id), { ...x, veiculo: todos.join(", "), dataCarga: x.data || dt, data: dt, finalizadoEm: Date.now() });
       b.delete(db.collection("docas_carregamentos").doc(x.id));
     });
     vi.forEach((f, id) => b.update(db.collection("fila_patio").doc(id), { status: "Em Viagem", timestampSaida: Date.now() }));
@@ -1471,6 +1471,7 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:12px;bor
     const m = prompt("Motivo (opcional):") || ""; atraso = 1;
     db.doc("docas_resumo/mes_" + hoje.slice(0, 7)).set({ total: F.increment(v), ajustes: F.arrayUnion({ v, motivo: m, em: Date.now() }) }, { merge: true }).catch(er => alert(er.message));
   };
+  setInterval(() => { if (iso(new Date()) !== hoje) location.reload(); }, 60000);
   // ---------- Cadastros ----------
   $("ct-add").onclick = () => {
     const n = $("ct-n").value.trim().toUpperCase(); if (bloq() || !n) return;
