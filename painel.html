@@ -1212,7 +1212,7 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:12px;bor
     const der = todos.filter(v => v.status === "Em Doca" && x.filial && chave(v.filial) === chave(x.filial) && !vs.includes(v.placa)).map(v => v.placa);
     const livre = v => !usados.has(v.placa) && !der.includes(v.placa);
     return vs.map(p => chipVeic(x.id, p, true)).join("") + der.map(p => chipVeic(x.id, p, false)).join("") +
-      `<select data-addv><option value="">+ veículo</option><optgroup label="Disponíveis (aguardando)">${todos.filter(v => v.status === "Aguardando" && livre(v)).map(v => `<option value="${esc(v.placa)}">${esc(v.placa)}</option>`).join("")}</optgroup><optgroup label="Em doca">${todos.filter(v => v.status === "Em Doca" && livre(v)).map(v => `<option value="${esc(v.placa)}">🚛 ${esc(v.placa)} (${esc(v.doca || "-")})</option>`).join("")}</optgroup></select>`;
+      `<select data-addv><option value="">+ veículo</option><optgroup label="Disponíveis (aguardando)">${todos.filter(v => v.status === "Aguardando" && livre(v)).map(v => `<option value="${esc(v.placa)}">${esc(v.placa)}</option>`).join("")}</optgroup><optgroup label="Em doca">${(emd => emd.length ? emd.map(v => `<option value="${esc(v.placa)}">🚛 ${esc(v.placa)} · ${esc(v.filial || "-")} (${esc(v.doca || "-")})</option>`).join("") : "<option disabled>nenhum veículo em doca</option>")(todos.filter(v => v.status === "Em Doca" && !vs.includes(v.placa) && !der.includes(v.placa)))}</optgroup></select>`;
   }
   async function addVeic(id, placa) {
     if (document.activeElement) document.activeElement.blur();
