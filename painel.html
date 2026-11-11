@@ -1079,7 +1079,7 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:12px;bor
   const bloq = () => { if (!admin()) { alert("Acesso negado! Faça o login de administrador primeiro."); return true; } };
   const parse = k => (CAL0[k] || "").split(",").filter(Boolean).map(s => { const [f, d] = s.split(":"); return { f, d: "DOCA " + d }; });
   let ativos = [], tipos = [], filiais = [], docasL = [], fila = [], placas = [], cal = {}, hist = [], hPer = 7;
-  let filaMap = {}, sel = new Set(), carregou = false, calOk = false, hView = "lista", calRows = 12;
+  let filaMap = {}, filaOk = false, sel = new Set(), carregou = false, calOk = false, hView = "lista", calRows = 12;
   let dataSel = iso(new Date()), rDia = 0, rMes = 0, mesMostrado = 0, atraso = 0;
 
   // ---------- UI ----------
@@ -1088,7 +1088,8 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:12px;bor
   #tab-docas .stat-card{padding:10px}#tab-docas .stat-numero{font-size:1.7rem}#tab-docas td,#tab-docas th{padding:6px 8px}
   #tab-docas input,#tab-docas select,#tab-docas textarea{padding:4px 6px;border:1px solid #cfd8e6;border-radius:5px;font:inherit}
   #tab-docas .dc-pane{display:none}#tab-docas .dc-pane.on{display:block}#tab-docas .chip{display:inline-block;background:#eef3fa;border-radius:14px;padding:3px 10px;margin:3px;font-size:.8rem;font-weight:600}
-  #tab-docas .chip b{cursor:pointer;color:#e74c3c;margin-left:6px}`;
+  #tab-docas #p-car section{overflow-x:auto}#tab-docas #dc-corpo td{white-space:nowrap;vertical-align:middle}
+  #tab-docas .vcel{display:flex;align-items:center;gap:4px;flex-wrap:nowrap}#tab-docas .chip b{cursor:pointer;color:#e74c3c;margin-left:6px}`;
   document.head.appendChild(st);
   const btn = document.createElement("button");
   btn.type = "button"; btn.className = "tab-btn"; btn.id = "btn-tab-exped"; btn.textContent = "Expedição";
@@ -1192,7 +1193,7 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:12px;bor
   db.collection("fila_patio").where("status", "in", ["Aguardando", "Em Doca"]).onSnapshot(s => {
     const m = {};
     s.docs.forEach(d => { const x = { id: d.id, ...d.data() }; if (!x.placa) return; const k = norm(x.placa); if (!m[k] || (x.timestampChegada || 0) > (m[k].timestampChegada || 0)) m[k] = x; });
-    filaMap = m; desenhar();
+    filaMap = m; filaOk = true; desenhar();
   });
   db.collection("cubagem_veiculos").onSnapshot(s => {
     placas = s.docs.map(d => d.data()).sort((a, b) => a.placa.localeCompare(b.placa));
@@ -1204,15 +1205,16 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:12px;bor
   const editando = () => { const a = document.activeElement; return a && a.closest && a.closest("#tab-docas") && /INPUT|SELECT|TEXTAREA/.test(a.tagName); };
   const chave = f => norm(f).replace(/^LOJA/, "");
   function chipVeic(id, p, rem) {
-    const v = filaMap[norm(p)], st = v ? v.status : "", cor = st === "Em Doca" ? "#ffd9a8" : st === "Aguardando" ? "#cfe6ff" : "#e6e9ef";
-    return `<span class="chip" style="background:${cor}" title="${st || "fora do pátio"}">${st === "Em Doca" ? "🚛 " : ""}${esc(p)}${rem ? `<b data-rv="${id}|${esc(p)}">✕</b>` : ""}</span>`;
+    const v = filaMap[norm(p)], st = v ? v.status : "", saiu = filaOk && !v;
+    const cor = st === "Em Doca" ? "#ffd9a8" : st === "Aguardando" ? "#cfe6ff" : "#dfe9df";
+    return `<span class="chip" style="background:${cor};white-space:nowrap;margin:0" title="${saiu ? "já saiu em viagem" : st}">${st === "Em Doca" ? "🚛 " : saiu ? "✓ " : ""}${esc(p)}${st === "Em Doca" ? `<b data-go="${esc(p)}" title="Colocar em viagem" style="color:#1d9d60">✔</b>` : ""}${rem ? `<b data-rv="${id}|${esc(p)}">✕</b>` : ""}</span>`;
   }
   function celVeic(x, usados) {
     const vs = (x.veiculo || "").split(",").map(s => s.trim()).filter(Boolean), todos = Object.values(filaMap);
     const der = todos.filter(v => v.status === "Em Doca" && x.filial && chave(v.filial) === chave(x.filial) && !vs.includes(v.placa)).map(v => v.placa);
     const livre = v => !usados.has(v.placa) && !der.includes(v.placa);
-    return vs.map(p => chipVeic(x.id, p, true)).join("") + der.map(p => chipVeic(x.id, p, false)).join("") +
-      `<select data-addv><option value="">+ veículo</option><optgroup label="Disponíveis (aguardando)">${todos.filter(v => v.status === "Aguardando" && livre(v)).map(v => `<option value="${esc(v.placa)}">${esc(v.placa)}</option>`).join("")}</optgroup><optgroup label="Em doca">${(emd => emd.length ? emd.map(v => `<option value="${esc(v.placa)}">🚛 ${esc(v.placa)} · ${esc(v.filial || "-")} (${esc(v.doca || "-")})</option>`).join("") : "<option disabled>nenhum veículo em doca</option>")(todos.filter(v => v.status === "Em Doca" && !vs.includes(v.placa) && !der.includes(v.placa)))}</optgroup></select>`;
+    return `<div class="vcel">` + vs.map(p => chipVeic(x.id, p, true)).join("") + der.map(p => chipVeic(x.id, p, false)).join("") +
+      `<select data-addv><option value="">+ veículo</option><optgroup label="Disponíveis (aguardando)">${todos.filter(v => v.status === "Aguardando" && livre(v)).map(v => `<option value="${esc(v.placa)}">${esc(v.placa)}</option>`).join("")}</optgroup><optgroup label="Em doca">${(emd => emd.length ? emd.map(v => `<option value="${esc(v.placa)}">🚛 ${esc(v.placa)} · ${esc(v.filial || "-")} (${esc(v.doca || "-")})</option>`).join("") : "<option disabled>nenhum veículo em doca</option>")(todos.filter(v => v.status === "Em Doca" && !vs.includes(v.placa) && !der.includes(v.placa)))}</optgroup></select></div>`;
   }
   async function addVeic(id, placa) {
     if (document.activeElement) document.activeElement.blur();
@@ -1296,18 +1298,26 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:12px;bor
     const b = { total: F.increment(v) };
     db.doc("docas_resumo/dia_" + data).set(b, { merge: true }); db.doc("docas_resumo/mes_" + data.slice(0, 7)).set(b, { merge: true });
   }
+  function veicAtivos(x) {
+    const vs = (x.veiculo || "").split(",").map(s => s.trim()).filter(Boolean);
+    const der = Object.values(filaMap).filter(v => v.status === "Em Doca" && x.filial && chave(v.filial) === chave(x.filial)).map(v => v.placa);
+    return [...new Set([...vs, ...der])];
+  }
+  const emDoca = x => veicAtivos(x).filter(p => (filaMap[norm(p)] || {}).status === "Em Doca");
   function arquivar(lote, b) {
-    let soma = 0;
+    let soma = 0; const vi = new Map();
     lote.forEach(x => {
-      const v = +x.valor || 0; soma += v; ajusta(x.data || iso(new Date()), v);
-      b.set(db.collection("docas_historico").doc(x.id), { ...x, data: x.data || iso(new Date()), finalizadoEm: Date.now() });
+      const v = +x.valor || 0, todos = veicAtivos(x); soma += v; ajusta(x.data || iso(new Date()), v);
+      todos.forEach(p => { const f = filaMap[norm(p)]; if (f && f.status === "Em Doca") vi.set(f.id, f); });
+      b.set(db.collection("docas_historico").doc(x.id), { ...x, veiculo: todos.join(", "), data: x.data || iso(new Date()), finalizadoEm: Date.now() });
       b.delete(db.collection("docas_carregamentos").doc(x.id));
     });
+    vi.forEach((f, id) => b.update(db.collection("fila_patio").doc(id), { status: "Em Viagem", timestampSaida: Date.now() }));
     return soma;
   }
   $("dc-fim").onclick = () => {
     if (bloq() || !ativos.length) return;
-    if (!confirm("Finalizar a expedição? Todos os valores vão para o mensal e a lista será limpa.")) return;
+    if (!confirm("Finalizar a expedição? Todos os valores vão para o mensal, a lista será limpa e os veículos em doca vão para viagem.")) return;
     const b = db.batch(), soma = arquivar(ativos, b);
     b.commit().then(() => voar(soma)).catch(x => alert(x.message));
   };
@@ -1414,6 +1424,8 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:12px;bor
     if (t.dataset.fin) {
       if (bloq()) return;
       const x = ativos.find(a => a.id === t.dataset.fin); if (!x) return;
+      const em = emDoca(x);
+      if (em.length && !confirm("Finalizar a carga e colocar em viagem: " + em.join(", ") + "?")) return;
       const b = db.batch(), s = arquivar([x], b); b.commit().then(() => voar(s)).catch(er => alert(er.message));
     }
     if (t.dataset.del && !bloq() && confirm("Excluir esta linha sem arquivar?")) db.collection("docas_carregamentos").doc(t.dataset.del).delete();
@@ -1429,6 +1441,11 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:12px;bor
     }
     if (t.dataset.dia) { if (bloq()) return; if (!preencher(t.dataset.dia)) alert("Nenhuma filial nova: tudo deste dia já está na lista."); }
     if (t.dataset.more) { calRows += 4; desenharCal(); }
+    if (t.dataset.go && !bloq()) {
+      const p = t.dataset.go, v = filaMap[norm(p)];
+      if (v && v.status === "Em Doca" && confirm("Colocar " + p + " em viagem?"))
+        db.collection("fila_patio").doc(v.id).update({ status: "Em Viagem", timestampSaida: Date.now() }).catch(er => alert(er.message));
+    }
     if (t.dataset.rv && !bloq()) {
       const [id, pl] = t.dataset.rv.split("|"), x = ativos.find(a => a.id === id);
       db.collection("docas_carregamentos").doc(id).update({ veiculo: (x.veiculo || "").split(",").map(s => s.trim()).filter(p => p && p !== pl).join(", ") });
