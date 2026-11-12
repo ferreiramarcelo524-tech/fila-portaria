@@ -237,7 +237,7 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:12px;bor
     <div id="tab-financeiro" class="tab-conteudo">
         <section class="card" style="padding: 0; overflow: hidden;">
             <iframe
-                src="https://ferreiramarcelo524-tech.github.io/painel-expedicao/"
+                id="frameTV" src="about:blank"
                 style="width: 100%; height: 85vh; border: none; display: block;"
                 title="Painel Financeiro - Expedição CD-84">
             </iframe>
@@ -854,6 +854,7 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:12px;bor
             emViagem.forEach((v) => {
                 const tr = document.createElement('tr');
                 let btnConcluir = `<button class="btn-action btn-done" onclick="concluirViagem('${v.id}', '${v.placa}')">Concluir</button>`;
+                let btnRetornar = `<button class="btn-action btn-edit" onclick="retornarDoca('${v.id}', '${v.placa}')">↩ Voltar p/ Doca</button>`;
                 
                 tr.innerHTML = `
                     <td><strong style="color:var(--travel); font-size:1.1rem;">${v.placa}</strong></td>
@@ -863,7 +864,7 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:12px;bor
                     <td>${v.timestampSaida ? new Date(v.timestampSaida).toLocaleTimeString('pt-BR') : '-'}</td>
                     <td><span class="badge status-em-viagem">Em Viagem</span></td>
                     <td>Doca: ${v.doca} (${v.conferente})</td>
-                    <td>${btnConcluir}</td>
+                    <td>${btnRetornar}${btnConcluir}</td>
                 `;
                 tabelaViagem.appendChild(tr);
             });
@@ -1044,6 +1045,14 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:12px;bor
         }
     };
 
+    window.retornarDoca = (id, placa) => {
+        if(!usuarioLogado) { alert("Acesso negado! Faça o login de administrador primeiro."); return; }
+        if (confirm(`Retornar o veículo ${placa} para a doca?`)) {
+            db.collection("fila_patio").doc(id).update({ status: "Em Doca", timestampSaida: firebase.firestore.FieldValue.delete() })
+            .catch(err => alert("Erro ao retornar: " + err.message));
+        }
+    };
+
     window.concluirViagem = (id, placa) => {
         if(!usuarioLogado) { alert("Acesso negado! Faça o login de administrador primeiro."); return; }
         if (confirm(`Deseja finalizar e concluir o processo da placa ${placa}?`)) {
@@ -1054,6 +1063,7 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:12px;bor
 
     setInterval(() => { document.getElementById('relogio').innerText = new Date().toLocaleTimeString('pt-BR'); }, 1000);
 </script>
+<script>document.getElementById("frameTV").src="https://ferreiramarcelo524-tech.github.io/painel-expedicao/?t="+Date.now();</script>
 <script src="frete.js"></script>
 <script>
 /* docas.js v2 — aba "Expedição" (Carregamentos | Histórico | Cadastros | Calendário) */
