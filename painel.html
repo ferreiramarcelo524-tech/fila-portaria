@@ -1221,10 +1221,10 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:12px;bor
   }
   function celVeic(x, usados) {
     const vs = (x.veiculo || "").split(",").map(s => s.trim()).filter(Boolean), todos = Object.values(filaMap);
-    const der = todos.filter(v => v.status === "Em Doca" && x.filial && chave(v.filial) === chave(x.filial) && !vs.includes(v.placa)).map(v => v.placa);
+    const der = todos.filter(v => v.status === "Em Doca" && x.filial && chave(v.filial) === chave(x.filial) && !vs.includes(v.placa) && !(x.removidos || []).includes(v.placa)).map(v => v.placa);
     const livre = v => !usados.has(v.placa) && !der.includes(v.placa);
     const aguard = todos.filter(v => v.status === "Aguardando").sort((p, q) => (p.timestampChegada || 0) - (q.timestampChegada || 0)).map((v, i) => ({ v, pos: i + 1 }));
-    return `<div class="vcel">` + vs.map(p => chipVeic(x.id, p, true)).join("") + der.map(p => chipVeic(x.id, p, false)).join("") +
+    return `<div class="vcel">` + vs.map(p => chipVeic(x.id, p, true)).join("") + der.map(p => chipVeic(x.id, p, true)).join("") +
       `<select data-addv><option value="">+ veículo</option><optgroup label="Disponíveis (aguardando)">${aguard.filter(o => livre(o.v)).map(o => `<option value="${esc(o.v.placa)}">${o.pos}º · ${esc(o.v.placa)}</option>`).join("")}</optgroup><optgroup label="Em doca">${(emd => emd.length ? emd.map(v => `<option value="${esc(v.placa)}">🚛 ${esc(v.placa)} · ${esc(v.filial || "-")} (${esc(v.doca || "-")})</option>`).join("") : "<option disabled>nenhum veículo em doca</option>")(todos.filter(v => v.status === "Em Doca" && !vs.includes(v.placa) && !der.includes(v.placa)).sort((p, q) => (p.timestampChamada || 0) - (q.timestampChamada || 0)))}</optgroup></select></div>`;
   }
   async function addVeic(id, placa) {
@@ -1238,7 +1238,7 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:12px;bor
       catch (er) { alert("Erro ao chamar o veículo: " + er.message); return desenhar(true); }
     }
     const l = (x.veiculo || "").split(",").map(s => s.trim()).filter(Boolean); l.push(placa);
-    db.collection("docas_carregamentos").doc(id).update({ veiculo: l.join(", ") });
+    db.collection("docas_carregamentos").doc(id).update({ veiculo: l.join(", "), removidos: F.arrayRemove(placa) });
   }
   function somaSel() {
     const l = ativos.filter(a => sel.has(a.id));
@@ -1274,14 +1274,14 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:12px;bor
     if (t.dataset.addv !== undefined && t.value && !bloq()) addVeic(t.closest("tr").dataset.id, t.value);
   });
   function preencher(k, data) {
-    const ex = new Set(ativos.map(a => norm(a.filial)));
-    const novos = itensDia(k).filter(it => !ex.has(norm(/^\d+$/.test(it.f) ? "LOJA " + it.f : it.f)));
+    const ex = new Set(ativos.map(a => chave(a.filial)));
+    const novos = itensDia(k).filter(it => !ex.has(chave(it.f)));
     if (!novos.length) return false;
     const b = db.batch(); let o = Date.now();
     novos.forEach(it => {
       const loja = /^(LOJA )?\d+$/.test(it.f), n = it.f.replace(/^LOJA /, "");
       b.set(db.collection("docas_carregamentos").doc(), {
-        tipo: loja ? "ABASTECIMENTO" : "ELETRO", filial: loja ? "LOJA " + n : it.f,
+        tipo: loja ? "ABASTECIMENTO" : "ELETRO", filial: n,
         doca: /^\d+$/.test(it.d) ? "DOCA " + it.d : it.d, valor: 0, veiculo: "", data: data || dataSel, ordem: o++
       });
     });
@@ -1311,7 +1311,7 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:12px;bor
   }
   function veicAtivos(x) {
     const vs = (x.veiculo || "").split(",").map(s => s.trim()).filter(Boolean);
-    const der = Object.values(filaMap).filter(v => v.status === "Em Doca" && x.filial && chave(v.filial) === chave(x.filial)).map(v => v.placa);
+    const der = Object.values(filaMap).filter(v => v.status === "Em Doca" && x.filial && chave(v.filial) === chave(x.filial) && !(x.removidos || []).includes(v.placa)).map(v => v.placa);
     return [...new Set([...vs, ...der])];
   }
   const emDoca = x => veicAtivos(x).filter(p => (filaMap[norm(p)] || {}).status === "Em Doca");
@@ -1459,7 +1459,7 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:12px;bor
     }
     if (t.dataset.rv && !bloq()) {
       const [id, pl] = t.dataset.rv.split("|"), x = ativos.find(a => a.id === id);
-      db.collection("docas_carregamentos").doc(id).update({ veiculo: (x.veiculo || "").split(",").map(s => s.trim()).filter(p => p && p !== pl).join(", ") });
+      db.collection("docas_carregamentos").doc(id).update({ veiculo: (x.veiculo || "").split(",").map(s => s.trim()).filter(p => p && p !== pl).join(", "), removidos: F.arrayUnion(pl) }).catch(er => alert(er.message));
     }
     if (t.dataset.ret) {
       const x = hist.find(h => h.id === t.dataset.ret);
