@@ -49,7 +49,7 @@ header>*{position:relative;z-index:1}header h1{letter-spacing:-.02em;font-weight
 #relogio{font-variant-numeric:tabular-nums;background:rgba(255,255,255,.14);padding:4px 12px;border-radius:12px;backdrop-filter:blur(6px)}
 .btn-login{border-radius:12px!important;transition:transform .2s,box-shadow .2s}.btn-login:hover{transform:translateY(-1px);box-shadow:0 8px 18px rgba(0,0,0,.2)}
 .tabs{position:relative;gap:6px!important;background:rgba(255,255,255,.65);backdrop-filter:blur(12px);padding:6px;border-radius:18px;box-shadow:0 8px 24px rgba(20,40,100,.08);width:fit-content;max-width:100%}
-#tab-pill{position:absolute;top:0;left:0;border-radius:13px;background:linear-gradient(135deg,#1746d1,#2b86ff);box-shadow:0 8px 18px rgba(31,91,255,.38);transition:transform .38s cubic-bezier(.3,1.3,.5,1),width .3s,height .3s;z-index:0;pointer-events:none}
+.tab-pill{position:absolute;top:0;left:0;border-radius:13px;background:linear-gradient(135deg,#1746d1,#2b86ff);box-shadow:0 8px 18px rgba(31,91,255,.38);transition:transform .38s cubic-bezier(.3,1.3,.5,1),width .3s,height .3s;z-index:0;pointer-events:none}
 .tab-btn{position:relative;z-index:1;background:transparent!important;border:0!important;box-shadow:none!important;border-radius:13px!important;color:#53627f;font-family:inherit;font-weight:700;transition:color .25s,transform .15s}
 .tab-btn:hover{color:var(--primary);transform:translateY(-1px)}.tab-btn.active{color:#fff!important}
 .tab-conteudo.ativo,.dc-pane.on{animation:entrar .45s cubic-bezier(.2,.8,.2,1)}
@@ -85,6 +85,16 @@ iframe{border-radius:22px}
 @keyframes fluxo{to{background-position:200% 0}}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important}}
 
+#vi-back{position:fixed;inset:0;z-index:9998;display:none}#vi-back.on{display:block}
+#vi-pop{position:fixed;background:rgba(255,255,255,.97);backdrop-filter:blur(16px);border-radius:20px;box-shadow:0 24px 60px rgba(10,31,92,.35);border:1px solid #e3e9f5;padding:16px;animation:popvi .22s cubic-bezier(.2,.9,.3,1.2);transform-origin:top left}
+.vi-h{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}.vi-placa{font-weight:800;font-size:1.3rem;color:var(--ink)}.vi-sub{font-size:.75rem;color:#7a8aa8;margin-top:2px}
+.vi-x{border:0;background:#eef3ff;color:#53627f;border-radius:10px;width:30px;height:30px;cursor:pointer;font-size:.95rem;transition:transform .15s,background .2s}.vi-x:hover{background:#ffe3e7;color:#e5324b;transform:rotate(90deg)}
+.vi-mes{margin:12px 0;padding:12px 14px;border-radius:16px;background:linear-gradient(135deg,#0a1f5c,#1f5bff);color:#fff;display:flex;flex-direction:column;gap:2px}.vi-mes b{font-size:1.65rem;letter-spacing:-.02em}.vi-mes small{opacity:.8;text-transform:capitalize}
+.vi-tit{font-size:.66rem;text-transform:uppercase;letter-spacing:.09em;color:#7a8aa8;font-weight:800;margin:4px 2px 6px}
+.vi-item{display:flex;justify-content:space-between;align-items:center;padding:9px 12px;border-radius:12px;background:#f4f8ff;margin-bottom:6px;font-size:.9rem}.vi-item span{display:flex;flex-direction:column}.vi-item small{color:#7a8aa8;font-size:.72rem}.vi-item strong{color:#0e9f77}
+.vi-load{padding:14px;text-align:center;color:#7a8aa8;font-size:.85rem}
+#tab-operacao td strong[style*="1.1rem"],#tab-doca td strong[style*="1.1rem"]{cursor:pointer;border-bottom:1px dashed currentColor}
+@keyframes popvi{from{opacity:0;transform:scale(.92) translateY(-6px)}to{opacity:1;transform:none}}
 </style>
 </head>
 <body>
@@ -1561,16 +1571,84 @@ iframe{border-radius:22px}
 </script>
 <script>
 (function () {
-  const tabs = document.querySelector(".tabs"); if (!tabs) return;
-  const pill = document.createElement("span"); pill.id = "tab-pill"; tabs.prepend(pill);
-  const mover = () => {
-    const a = tabs.querySelector(".tab-btn.active"); if (!a) return;
-    pill.style.width = a.offsetWidth + "px"; pill.style.height = a.offsetHeight + "px";
-    pill.style.transform = "translate(" + a.offsetLeft + "px," + a.offsetTop + "px)";
+  function init(tabs) {
+    if (tabs.dataset.pill) return; tabs.dataset.pill = 1;
+    const pill = document.createElement("span"); pill.className = "tab-pill"; tabs.prepend(pill);
+    const mover = () => {
+      const a = tabs.querySelector(":scope > .tab-btn.active"); if (!a || !a.offsetWidth) return;
+      pill.style.width = a.offsetWidth + "px"; pill.style.height = a.offsetHeight + "px";
+      pill.style.transform = "translate(" + a.offsetLeft + "px," + a.offsetTop + "px)";
+    };
+    new MutationObserver(mover).observe(tabs, { subtree: true, attributes: true, attributeFilter: ["class"], childList: true });
+    if (window.ResizeObserver) new ResizeObserver(mover).observe(tabs);
+    window.addEventListener("resize", mover); setTimeout(mover, 60); setTimeout(mover, 600);
+    if (document.fonts) document.fonts.ready.then(mover);
+  }
+  let agendado = false;
+  const varre = () => { agendado = false; document.querySelectorAll(".tabs").forEach(init); };
+  varre();
+  new MutationObserver(() => { if (!agendado) { agendado = true; requestAnimationFrame(varre); } }).observe(document.body, { childList: true, subtree: true });
+})();
+
+</script>
+<script>
+/* Aba flutuante do veículo (clique na placa na aba Operação) */
+(function () {
+  const db = firebase.firestore();
+  const BRL = v => (+v || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  const esc = t => String(t == null ? "" : t).replace(/[<>&"']/g, "");
+  const normP = p => String(p || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+  const RX = /^[A-Z]{3}-?[0-9][A-Z0-9][0-9]{2}$/;
+  const fmt = ts => { const d = new Date(ts); return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }) + " " + d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }); };
+  let tabP = null, tabT = 0, tok = 0, rect = null;
+  const tabela = () => {
+    if (tabP && Date.now() - tabT < 600000) return tabP;
+    tabT = Date.now();
+    return tabP = db.collection("tabela_frete").get().then(s => { const m = {}; s.forEach(d => { const r = d.data(); m[r.codigo + "_" + r.tipoCod] = r; }); return m; }).catch(e => { tabP = null; throw e; });
   };
-  new MutationObserver(mover).observe(tabs, { subtree: true, attributes: true, attributeFilter: ["class"], childList: true });
-  window.addEventListener("resize", mover); setTimeout(mover, 60); setTimeout(mover, 600);
-  if (document.fonts) document.fonts.ready.then(mover);
+  const codigos = f => {
+    if (!f) return [];
+    const s = String(f).trim(), out = [];
+    (/^\d+(\s+\d+)+$/.test(s) ? s.split(/\s+/) : s.split(/[\/,;+&|\n]|\s+e\s+/i)).forEach(p => { const m = p.trim().match(/^(\d+)/); if (m && !out.includes(m[1])) out.push(m[1]); });
+    return out;
+  };
+  const back = document.createElement("div"), pop = document.createElement("div");
+  back.id = "vi-back"; pop.id = "vi-pop"; back.appendChild(pop); document.body.appendChild(back);
+  const fechar = () => { back.classList.remove("on"); tok++; };
+  back.addEventListener("click", e => { if (e.target === back) fechar(); });
+  pop.addEventListener("click", e => { if (e.target.closest(".vi-x")) fechar(); });
+  document.addEventListener("keydown", e => { if (e.key === "Escape") fechar(); });
+  window.addEventListener("scroll", () => { if (back.classList.contains("on")) fechar(); }, true);
+  function posicionar() {
+    const w = Math.min(340, innerWidth - 16);
+    pop.style.width = w + "px"; pop.style.left = Math.min(Math.max(8, rect.left), innerWidth - w - 8) + "px"; pop.style.top = "0px";
+    requestAnimationFrame(() => { const h = pop.offsetHeight; let t = rect.bottom + 8; if (t + h > innerHeight - 8) t = Math.max(8, rect.top - h - 8); pop.style.top = t + "px"; });
+  }
+  const cab = (placa, mot) => `<div class="vi-h"><div><div class="vi-placa">${esc(placa)}</div><div class="vi-sub">${esc(mot || "")}</div></div><button type="button" class="vi-x" title="Fechar">✕</button></div>`;
+  function abrir(placa, alvo) {
+    const meu = ++tok; rect = alvo.getBoundingClientRect();
+    pop.innerHTML = cab(placa) + '<div class="vi-load">Carregando…</div>'; back.classList.add("on"); posicionar();
+    Promise.all([tabela().catch(() => null), db.collection("veiculos_frete").doc(normP(placa)).get().catch(() => null), db.collection("fila_patio").where("placa", "==", placa).get()])
+      .then(([mapa, vf, snap]) => {
+        if (meu !== tok) return;
+        const tipoV = (vf && vf.exists && vf.data().tipoCod) || "";
+        const todos = snap.docs.map(d => d.data()), mot = (todos.sort((a, b) => (b.timestampChegada || 0) - (a.timestampChegada || 0))[0] || {}).motorista;
+        const lista = todos.filter(x => x.timestampSaida && x.status !== "Cancelado").sort((a, b) => b.timestampSaida - a.timestampSaida);
+        const frete = c => { const cods = codigos(c.filial), tipo = tipoV || c.tipoVeiculo || ""; if (!mapa || !cods.length || !tipo) return null; let b = null; cods.forEach(k => { const r = mapa[k + "_" + tipo]; if (r && (b === null || r.valor > b)) b = r.valor; }); return b; };
+        const n = new Date(), ini = new Date(n.getFullYear(), n.getMonth(), 1).getTime();
+        const mes = lista.filter(x => x.timestampSaida >= ini), vals = mes.map(frete);
+        const soma = vals.reduce((s, v) => s + (v || 0), 0), sem = vals.filter(v => v === null).length;
+        pop.innerHTML = cab(placa, mot) +
+          `<div class="vi-mes"><small>Frete em ${n.toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}</small><b>${BRL(soma)}</b><small>${mes.length} carga(s)${sem ? " · " + sem + " sem frete cadastrado" : ""}${mapa ? "" : " · tabela de frete indisponível"}</small></div>` +
+          `<div class="vi-tit">Últimas 3 cargas</div>` +
+          (lista.slice(0, 3).map(x => { const f = frete(x); return `<div class="vi-item"><span><b>${esc(x.filial || "-")}</b><small>${fmt(x.timestampSaida)}</small></span><strong>${f === null ? "—" : BRL(f)}</strong></div>`; }).join("") || '<div class="vi-load">Nenhuma carga concluída.</div>');
+        posicionar();
+      }).catch(e => { if (meu === tok) { pop.innerHTML = cab(placa) + '<div class="vi-load">Erro: ' + esc(e.message) + "</div>"; posicionar(); } });
+  }
+  document.addEventListener("click", e => {
+    const s = e.target.closest && e.target.closest("#tab-operacao strong, #tab-doca strong"); if (!s) return;
+    const t = s.textContent.trim().toUpperCase(); if (RX.test(t)) abrir(t, s);
+  });
 })();
 
 </script>
