@@ -104,6 +104,38 @@ iframe{border-radius:22px}
 .ed-l input{display:block;width:100%;margin-top:4px;padding:10px 12px;border:1px solid #e1e8f5;background:#f6f9ff;border-radius:11px;font:inherit;font-size:.95rem;color:var(--text-main);transition:border-color .2s,box-shadow .2s}
 .ed-l input:focus{outline:none;border-color:#6f93ff;background:#fff;box-shadow:0 0 0 4px rgba(31,91,255,.14)}
 .ed-b{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
+#tab-pedidos .cv-pane{display:none}#tab-pedidos .cv-pane.on{display:block;animation:entrar .45s cubic-bezier(.2,.8,.2,1)}
+#tab-pedidos h2>:last-child:not(:first-child){margin-left:auto}
+#tab-pedidos .cv-grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+#tab-pedidos .cv-box label{display:block;font-weight:700;font-size:.8rem;color:#53627f;margin-bottom:6px}
+#tab-pedidos textarea{width:100%;height:180px;padding:12px;border:1px solid #e1e8f5;border-radius:14px;font-family:ui-monospace,Consolas,monospace;font-size:.8rem;line-height:1.4;resize:vertical;background:#f6f9ff;transition:border-color .2s,box-shadow .2s}
+#tab-pedidos textarea:focus{outline:none;border-color:#6f93ff;background:#fff;box-shadow:0 0 0 4px rgba(31,91,255,.14)}
+#tab-pedidos .cv-drop{border:2px dashed #c9d6f2;border-radius:14px;height:180px;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#f6f9ff;cursor:pointer;padding:16px;text-align:center;transition:all .25s}
+#tab-pedidos .cv-drop:hover,#tab-pedidos .cv-drop.dragover{border-color:var(--primary);background:#eaf1ff;transform:translateY(-2px)}
+#tab-pedidos .cv-drop input{display:none}#tab-pedidos .cv-drop svg{width:36px;height:36px;fill:#7a8aa8;margin-bottom:8px}
+#tab-pedidos .cv-fname{font-size:.75rem;color:var(--primary);font-weight:700;margin-top:6px;word-break:break-all}
+#tab-pedidos .cv-actions{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap}
+#tab-pedidos .cv-actions .btn-action,#tab-pedidos .cv-par .btn-action{padding:10px 18px;font-size:.85rem;display:inline-flex;align-items:center;gap:8px}
+#tab-pedidos .cv-result{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
+#tab-pedidos .cv-output{height:250px;background:#0a1230;color:#5fd0ff;font-family:ui-monospace,Consolas,monospace;font-size:.8rem;padding:12px;border-radius:14px;overflow:auto;white-space:pre}
+#tab-pedidos .cv-tbl{max-height:320px;overflow:auto;border-radius:14px;border:1px solid #e3e9f5;background:#fff}
+#tab-pedidos .cv-tbl table{border-collapse:collapse!important;border-spacing:0!important;font-size:.8rem}
+#tab-pedidos .cv-tbl th{background:#f1f5f9!important;color:#334155!important;position:sticky;top:0;z-index:2;padding:9px 12px;border-bottom:2px solid #cbd5e1!important}
+#tab-pedidos .cv-tbl td{padding:7px 12px;border-bottom:1px solid #f1f5f9!important;background:#fff;border-radius:0!important}
+#tab-pedidos tbody tr:hover{transform:none;filter:none}#tab-pedidos .cv-tbl tbody tr:hover td{background:#f8fafc}
+#tab-pedidos tr.cv-dup td{background:#fef2f2!important;color:#991b1b}#tab-pedidos tr.cv-pm td{background:#fffbeb!important;color:#92400e}
+#tab-pedidos tr.cv-ac td{background:#eff6ff!important;color:#1e3a8a}#tab-pedidos tr.cv-ac td:first-child{border-left:4px solid #3b82f6}
+#tab-pedidos .cv-edit{background:#fff;border:1px dashed transparent;padding:2px 4px;border-radius:6px;outline:none;transition:border-color .2s,box-shadow .2s}
+#tab-pedidos .cv-edit:hover{border-color:#cbd5e1}#tab-pedidos .cv-edit:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(31,91,255,.12)}
+#tab-pedidos .cv-auto{background:var(--primary);color:#fff;font-size:.65rem;padding:2px 7px;border-radius:6px;font-weight:700;margin-left:6px;display:inline-block}
+#tab-pedidos .cv-badge{background:#e0f2fe;color:#0369a1;padding:3px 10px;border-radius:12px;font-size:.72rem;font-weight:700}
+#tab-pedidos .cv-alert{background:#fef3c7;border:1px solid #f59e0b;color:#92400e;padding:10px 14px;border-radius:14px;font-size:.8rem;margin-top:12px;display:none;align-items:center;justify-content:space-between;gap:10px}
+#tab-pedidos .cv-alert.show{display:flex}#tab-pedidos .cv-pair{background:#fffbeb;border-color:#fbbf24;align-items:flex-start;flex-direction:column;gap:6px}#tab-pedidos .cv-pair ul{margin:0 0 0 18px;padding:0}
+#tab-pedidos .cv-par{display:grid;grid-template-columns:1fr 1fr 1.4fr auto;gap:12px;align-items:end}
+#tab-pedidos .cv-par label{display:block;font-weight:700;font-size:.72rem;color:#53627f;margin-bottom:4px}
+#tab-pedidos .cv-par input{width:100%;padding:9px 10px;border:1px solid #e1e8f5;background:#f6f9ff;border-radius:11px;font:inherit;font-size:.85rem;transition:border-color .2s,box-shadow .2s}
+#tab-pedidos .cv-par input:focus{outline:none;border-color:#6f93ff;background:#fff;box-shadow:0 0 0 4px rgba(31,91,255,.14)}
+@media(max-width:900px){#tab-pedidos .cv-grid2,#tab-pedidos .cv-result,#tab-pedidos .cv-par{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -1218,7 +1250,7 @@ iframe{border-radius:22px}
 
   btn.onclick = () => {
     document.querySelectorAll(".tab-conteudo").forEach(e => e.classList.remove("ativo"));
-    document.querySelectorAll(".tab-btn").forEach(e => e.classList.remove("active"));
+    document.querySelectorAll(".container > .tabs > .tab-btn").forEach(e => e.classList.remove("active"));
     sec.classList.add("ativo"); btn.classList.add("active");
   };
   document.addEventListener("click", e => {
@@ -1784,6 +1816,667 @@ iframe{border-radius:22px}
       } catch (e) { alert("Erro ao salvar: " + e.message); }
     };
   };
+})();
+
+</script>
+<template id="cv-tpl">
+<div class="periodo-seletor" style="margin-bottom:10px"><button type="button" class="periodo-btn active" data-cv-sub="conversor">Conversor de Pedidos</button><button type="button" class="periodo-btn" data-cv-sub="casados">Itens Casados</button><button type="button" class="periodo-btn" data-cv-sub="ajuda">Instruções de Uso</button></div>
+<!-- ABA: CONVERSOR -->
+    <div id="cv-p-conversor" class="cv-pane on">
+      <div class="card">
+        <h2>
+          <span>Entrada de Dados (E-mail ou Planilha)</span>
+          <span class="cv-badge" id="itemCountBadge">0 itens carregados</span>
+        </h2>
+
+        <div class="cv-grid2">
+          <div class="cv-box">
+            <label>Cole o texto do e-mail ou do Excel</label>
+            <textarea id="emailInput" placeholder="Exemplos aceitos:&#10;580252 - G ROUPA ATUALE FORTAL 4P2G ACAC/REFL (1 UNID)&#10;627235 - CAIXA SOM JBL BOOMBOX 4 BLK---- 06 UNID"></textarea>
+          </div>
+          <div class="cv-box">
+            <label>Ou carregue uma planilha (.xlsx)</label>
+            <label class="cv-drop" id="dropZone">
+              <svg viewBox="0 0 24 24"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z"/></svg>
+              <strong>Clique ou arraste o arquivo .xlsx aqui</strong>
+              <span style="color:#64748b; font-size:12px; margin-top:2px;">Formatos aceitos: .xlsx, .xls</span>
+              <input type="file" id="fileInput" accept=".xlsx,.xls">
+              <div class="cv-fname" id="fileNameDisplay"></div>
+            </label>
+          </div>
+        </div>
+
+        <div class="cv-actions">
+          <button class="btn-action btn-call" onclick="cv.processarPedidos()">
+            <svg style="width:16px;height:16px;fill:currentColor" viewBox="0 0 24 24"><path d="M19 8l-4 4h3c0 3.31-2.69 6-6 6-1.01 0-1.97-.25-2.8-.7l-1.46 1.46C8.97 19.54 10.43 20 12 20c4.42 0 8-3.58 8-8h3l-4-4zM6 12c0-3.31 2.69-6 6-6 1.01 0 1.97.25 2.8.7l1.46-1.46C15.03 4.46 13.57 4 12 4 7.58 4 4 7.58 4 12H1l4 4 4-4H6z"/></svg>
+            Converter Pedidos
+          </button>
+          <button class="btn-action btn-move" onclick="cv.limparTudo()">Limpar Tudo</button>
+        </div>
+      </div>
+
+      <!-- Alerta de Duplicados -->
+      <div class="cv-alert" id="alertBox">
+        <span id="alertText">Atenção: Existem códigos duplicados na lista.</span>
+        <button class="btn-action btn-done" style="padding:4px 10px; font-size:12px;" onclick="cv.unificarDuplicados()">Unificar Duplicados</button>
+      </div>
+
+      <!-- Notificação de Itens Casados -->
+      <div class="cv-alert cv-pair" id="pairAlertBox">
+        <strong id="pairAlertTitle">Atenção: itens casados com quantidade divergente ou incompleta</strong>
+        <ul id="pairAlertList"></ul>
+      </div>
+
+      <!-- Resultados & Tabela -->
+      <div class="cv-result" style="margin-top: 24px;">
+        <div class="card" style="margin-bottom:0;">
+          <h2>
+            <span>Resultado Pronto para o Sistema</span>
+            <button class="btn-action btn-call" style="padding:4px 12px; font-size:12px;" onclick="cv.copiarResultado()" id="copyBtn">Copiar Código</button>
+          </h2>
+          <div class="cv-output" id="outputArea">Nenhum pedido processado ainda...</div>
+        </div>
+
+        <div class="card" style="margin-bottom:0;">
+          <h2>
+            <span>Conferência e Edição de Itens</span>
+            <span class="cv-badge" id="totalQtdBadge">Total Qtd: 0</span>
+          </h2>
+          <p style="font-size:12px; color:#64748b; margin-bottom:10px;">Clique diretamente nas células para editar ou use os botões de ação.</p>
+          <div class="cv-tbl">
+            <table>
+              <thead>
+                <tr>
+                  <th style="width: 80px;">Código</th>
+                  <th>Descrição</th>
+                  <th style="width: 60px; text-align:center;">Qtd</th>
+                  <th style="width: 70px; text-align:center;">Ações</th>
+                </tr>
+              </thead>
+              <tbody id="tableBody">
+                <tr><td colspan="4" style="text-align:center; color:#94a3b8; padding:30px;">Nenhum item na tabela</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ABA: ITENS CASADOS -->
+    <div id="cv-p-casados" class="cv-pane">
+      <div class="card">
+        <h2>
+          <span>Cadastro de Itens Casados</span>
+        </h2>
+        <p style="font-size:12px; color:#64748b; margin-bottom:14px;">Cadastre pares de códigos que precisam sair sempre na mesma quantidade (ex: condensadora e evaporadora de um ar-condicionado). O cadastro fica salvo neste navegador.</p>
+
+        <div class="cv-par">
+          <div>
+            <label>Código 1</label>
+            <input type="text" id="parCodigoA" placeholder="Ex: 628901">
+          </div>
+          <div>
+            <label>Código 2</label>
+            <input type="text" id="parCodigoB" placeholder="Ex: 628902">
+          </div>
+          <div>
+            <label>Nome do conjunto (opcional)</label>
+            <input type="text" id="parNome" placeholder="Ex: AR COND GREE 12000 INV">
+          </div>
+          <button class="btn-action btn-call" onclick="cv.cadastrarPar()">Cadastrar Par</button>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:0;">
+        <h2>
+          <span>Pares Cadastrados</span>
+          <span class="cv-badge" id="paresCountBadge">0 pares</span>
+        </h2>
+        <div class="cv-tbl">
+          <table>
+            <thead>
+              <tr>
+                <th style="width: 100px;">Código 1</th>
+                <th style="width: 100px;">Código 2</th>
+                <th>Nome do conjunto</th>
+                <th style="width: 70px; text-align:center;">Ações</th>
+              </tr>
+            </thead>
+            <tbody id="paresBody">
+              <tr><td colspan="4" style="text-align:center; color:#94a3b8; padding:30px;">Nenhum par cadastrado</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ABA: AJUDA -->
+    <div id="cv-p-ajuda" class="cv-pane">
+      <div class="card">
+        <h2>Instruções de Uso do Conversor CD-84</h2>
+        <ul style="margin-left:20px; line-height:1.8; font-size:14px; color:#334155;">
+          <li><strong>Colagem de E-mail:</strong> O sistema reconhece múltiplos formatos de pedidos recebidos por e-mail, incluindo o formato com quantidade entre parênteses ao final (ex: `(1 UNID)`, `(20 unids)`) e o formato tradicional com hífens e sufixos.</li>
+          <li><strong>Planilha Excel:</strong> Você pode arrastar ou selecionar um arquivo `.xlsx`. O sistema varre as colunas procurando os códigos e quantidades.</li>
+          <li><strong>Formatação Automática:</strong> As quantidades são formatadas automaticamente com dois dígitos (ex: 1 vira 01).</li>
+          <li><strong>Conferência e Edição:</strong> A tabela exibe todos os itens processados. Você pode editar qualquer código, descrição ou quantidade clicando na célula. Itens com códigos duplicados ficam destacados em vermelho com opção de unificação automática.</li>
+          <li><strong>Itens Casados com Destaque:</strong> Na aba "Itens Casados", cadastre pares obrigatórios. Caso um item falte ou tenha quantidade divergente, o sistema corrige e destaca a linha alterada em azul com o selo ⚡ indicando a alteração em evidência.</li>
+          <li><strong>Cópia Rápida:</strong> O resultado sai no formato exato (`código [TAB] quantidade`), pronto para colar no sistema de expedição do CD-84.</li>
+        </ul>
+      </div>
+    </div>
+</template>
+<script>
+/* Aba "Pedidos": conversor de pedidos (e-mail/planilha) para o sistema do CD-84 */
+(function () {
+  const main = document.querySelector(".tabs"), tpl = document.getElementById("cv-tpl"); if (!main || !tpl) return;
+  const db = firebase.firestore();
+  const h = t => String(t == null ? "" : t).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  const logadoSilencioso = () => typeof usuarioLogado !== "undefined" && !!usuarioLogado;
+  const logado = () => { if (!logadoSilencioso()) { alert("Acesso negado! Faça o login de administrador primeiro."); return false; } return true; };
+  const xlsx = () => window.XLSX ? Promise.resolve() : new Promise((ok, er) => { const e = document.createElement("script"); e.src = "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"; e.onload = ok; e.onerror = () => er(new Error("Não foi possível carregar o leitor de planilhas.")); document.head.appendChild(e); });
+
+  // ---- aba no menu principal ----
+  const btn = document.createElement("button"); btn.type = "button"; btn.className = "tab-btn"; btn.id = "btn-tab-pedidos"; btn.textContent = "Pedidos"; main.appendChild(btn);
+  const sec = document.createElement("div"); sec.id = "tab-pedidos"; sec.className = "tab-conteudo"; sec.innerHTML = tpl.innerHTML;
+  document.querySelector(".container").appendChild(sec);
+  btn.onclick = () => {
+    document.querySelectorAll(".tab-conteudo").forEach(e => e.classList.remove("ativo"));
+    main.querySelectorAll(":scope > .tab-btn").forEach(e => e.classList.remove("active"));
+    sec.classList.add("ativo"); btn.classList.add("active");
+  };
+  document.addEventListener("click", e => { const b = e.target.closest(".tab-btn"); if (b && b !== btn && b.parentElement === main) { sec.classList.remove("ativo"); btn.classList.remove("active"); } });
+  sec.addEventListener("click", e => {
+    const t = e.target.closest("[data-cv-sub]"); if (!t) return;
+    sec.querySelectorAll("[data-cv-sub]").forEach(x => x.classList.toggle("active", x === t));
+    sec.querySelectorAll(".cv-pane").forEach(p => p.classList.toggle("on", p.id === "cv-p-" + t.dataset.cvSub));
+  });
+
+  // ---- conversor (código original) ----
+  let excelBuffer = null;
+  let currentItems = [];
+  let paresCasados = [];
+
+  const refPares = db.doc("pedidos_config/itens_casados");
+  const guardaLocal = () => { try { localStorage.setItem('cd84_pares_casados', JSON.stringify(paresCasados)); } catch (e) {} };
+  function salvarPares() { guardaLocal(); refPares.set({ lista: paresCasados, em: Date.now() }).catch(() => {}); }
+  function carregarPares() {
+    try { const raw = localStorage.getItem('cd84_pares_casados'); paresCasados = raw ? JSON.parse(raw) : []; } catch (e) { paresCasados = []; }
+    refPares.get().then(s => {
+      if (s.exists) { paresCasados = s.data().lista || []; guardaLocal(); }
+      else if (paresCasados.length && logadoSilencioso()) salvarPares();
+      renderParesTable(); if (currentItems.length) renderTable();
+    }).catch(() => {});
+  }
+
+  function cadastrarPar() {
+    if (!logado()) return;
+    const codigoA = document.getElementById('parCodigoA').value.trim();
+    const codigoB = document.getElementById('parCodigoB').value.trim();
+    const nome = document.getElementById('parNome').value.trim();
+
+    if(!/^\d{4,7}$/.test(codigoA) || !/^\d{4,7}$/.test(codigoB)) {
+      alert('Informe os dois códigos (apenas números, 4 a 7 dígitos).');
+      return;
+    }
+    if(codigoA === codigoB) {
+      alert('Os dois códigos do par devem ser diferentes.');
+      return;
+    }
+    const jaExiste = paresCasados.some(p =>
+      (p.codigoA === codigoA && p.codigoB === codigoB) ||
+      (p.codigoA === codigoB && p.codigoB === codigoA)
+    );
+    if(jaExiste) {
+      alert('Esse par já está cadastrado.');
+      return;
+    }
+
+    paresCasados.push({ codigoA, codigoB, nome: nome || '' });
+    salvarPares();
+    renderParesTable();
+
+    document.getElementById('parCodigoA').value = '';
+    document.getElementById('parCodigoB').value = '';
+    document.getElementById('parNome').value = '';
+
+    if(currentItems.length) renderTable();
+  }
+
+  function removerPar(idx) {
+    if (!logado()) return;
+    paresCasados.splice(idx, 1);
+    salvarPares();
+    renderParesTable();
+    if(currentItems.length) renderTable();
+  }
+
+  function renderParesTable() {
+    const tbody = document.getElementById('paresBody');
+    const badge = document.getElementById('paresCountBadge');
+    badge.textContent = paresCasados.length + (paresCasados.length === 1 ? ' par' : ' pares');
+
+    if(!paresCasados.length) {
+      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#94a3b8; padding:30px;">Nenhum par cadastrado</td></tr>';
+      return;
+    }
+
+    let html = '';
+    paresCasados.forEach((p, idx) => {
+      html += `<tr>
+        <td>${h(p.codigoA)}</td>
+        <td>${h(p.codigoB)}</td>
+        <td>${h(p.nome) || '<span style="color:#94a3b8;">-</span>'}</td>
+        <td style="text-align:center;">
+          <button onclick="cv.removerPar(${idx})" title="Excluir" style="background:none; border:none; cursor:pointer; color:#dc2626; font-weight:bold; font-size:14px;">🗑️</button>
+        </td>
+      </tr>`;
+    });
+    tbody.innerHTML = html;
+  }
+
+  carregarPares();
+  renderParesTable();
+
+  const fileInput = document.getElementById('fileInput');
+  const dropZone = document.getElementById('dropZone');
+  const fileNameDisplay = document.getElementById('fileNameDisplay');
+
+  fileInput.addEventListener('change', handleFileSelect);
+  dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+  dropZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropZone.classList.remove('dragover');
+    if(e.dataTransfer.files.length) {
+      fileInput.files = e.dataTransfer.files;
+      handleFileSelect();
+    }
+  });
+
+  function handleFileSelect() {
+    const file = fileInput.files[0];
+    if(!file) return;
+    fileNameDisplay.textContent = file.name;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      excelBuffer = new Uint8Array(e.target.result);
+    };
+    reader.readAsArrayBuffer(file);
+  }
+
+  function pad2(n) {
+    let num = parseInt(n, 10);
+    if(isNaN(num)) return "01";
+    return num < 10 ? '0' + num : String(num);
+  }
+
+  function parseEmailText(text) {
+    const items = [];
+    const lines = text.split(/\r?\n/);
+    const codeRe = /^\s*(\d{4,7})\s*-/;
+    
+    for(let line of lines) {
+      let trimmed = line.trim();
+      if(!trimmed) continue;
+      let codeMatch = trimmed.match(codeRe);
+      if(!codeMatch) {
+        let parts = trimmed.split(/\t|\s{2,}/);
+        if(parts.length >= 2) {
+          let codeP = parts[0].trim();
+          let qtyP = parts[parts.length - 1].trim();
+          if(/^\d{4,7}$/.test(codeP) && /^\d+$/.test(qtyP)) {
+            items.push({ code: codeP, desc: parts.slice(1, parts.length-1).join(' ') || 'Item Expedição', qty: pad2(qtyP) });
+            continue;
+          }
+        }
+        continue;
+      }
+      
+      let code = codeMatch[1];
+      let remainder = trimmed.slice(codeMatch[0].length).trim();
+      
+      let parenQtyMatch = remainder.match(/\(\s*(\d+)\s*(?:UNID|UNIDS|UN)?\s*\)\s*$/i);
+      let qty = '01';
+      let desc = remainder;
+      
+      if(parenQtyMatch) {
+        qty = pad2(parenQtyMatch[1]);
+        desc = remainder.slice(0, remainder.length - parenQtyMatch[0].length).trim();
+      } else {
+        let qtyRe = /(\d{1,4})\s*(?:UNID|UN)?\s*$/i;
+        let qtyMatch = remainder.match(qtyRe);
+        if(qtyMatch) {
+          qty = pad2(qtyMatch[1]);
+          desc = remainder.slice(0, remainder.length - qtyMatch[0].length).trim();
+        }
+      }
+      
+      desc = desc.replace(/-{2,}/g, ' ').replace(/\s+/g, ' ').trim();
+      items.push({ code: code, desc: desc || 'Item CD84', qty: qty });
+    }
+    return items;
+  }
+
+  function detectHeader(rows) {
+    const maxScan = Math.min(rows.length, 10);
+    for(let r = 0; r < maxScan; r++) {
+      const row = rows[r];
+      if(!row) continue;
+      let codeCol = -1, qtyCol = -1;
+      row.forEach((cell, i) => {
+        if(typeof cell === 'string') {
+          const c = cell.trim().toUpperCase();
+          if(codeCol === -1 && (c.includes('CODIGO') || c.includes('CÓDIGO') || c.includes('PRODUTO'))) codeCol = i;
+          if(qtyCol === -1 && (c === 'QTD' || c === 'QT' || c.includes('QUANTID'))) qtyCol = i;
+        }
+      });
+      if(codeCol !== -1 && qtyCol !== -1) {
+        return { headerRow: r, codeCol, qtyCol };
+      }
+    }
+    return null;
+  }
+
+  function parseQtyCell(cell) {
+    if(typeof cell === 'number') return cell;
+    if(typeof cell === 'string') {
+      const t = cell.trim().replace(',', '.');
+      if(/^\d+(\.\d+)?$/.test(t)) return parseFloat(t);
+    }
+    return null;
+  }
+
+  function parseExcelData(buffer) {
+    const items = [];
+    const wb = XLSX.read(buffer, { type: 'array' });
+    const hiddenSheets = {};
+    if(wb.Workbook && wb.Workbook.Sheets) {
+      wb.Workbook.Sheets.forEach(s => {
+        if(s.Hidden && s.Hidden !== 0) hiddenSheets[s.name] = true;
+      });
+    }
+
+    wb.SheetNames.forEach(sheetName => {
+      if(hiddenSheets[sheetName]) return;
+      const ws = wb.Sheets[sheetName];
+      const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null });
+      const header = detectHeader(rows);
+
+      if(header) {
+        for(let r = header.headerRow + 1; r < rows.length; r++) {
+          const row = rows[r];
+          if(!row) continue;
+          const codeCell = row[header.codeCol];
+          if(typeof codeCell !== 'string') continue;
+          const match = codeCell.match(/^\s*(\d{4,7})\s*-\s*(.*)$/);
+          if(!match) continue;
+          const qtyVal = parseQtyCell(row[header.qtyCol]);
+          if(qtyVal === null) continue;
+          items.push({ code: match[1], desc: (match[2]||'').trim(), qty: pad2(qtyVal) });
+        }
+      } else {
+        for(let row of rows) {
+          if(!row || row.length < 2) continue;
+          let codeStr = null;
+          let qtyVal = null;
+          for(let cell of row) {
+            if(typeof cell === 'string' && /^\s*\d{4,7}\s*-/.test(cell)) {
+              codeStr = cell;
+            }
+          }
+          let numbers = row.filter(c => typeof c === 'number');
+          if(codeStr) {
+            let match = codeStr.match(/^\s*(\d{4,7})\s*-\s*(.*)$/);
+            let idx = row.indexOf(codeStr);
+            for(let i = idx + 1; i < row.length; i++) {
+              if(typeof row[i] === 'number') { qtyVal = row[i]; break; }
+            }
+            if(!qtyVal && numbers.length) qtyVal = numbers[numbers.length - 1];
+            if(match && qtyVal !== null) {
+              items.push({ code: match[1], desc: (match[2]||'').trim(), qty: pad2(qtyVal) });
+            }
+          }
+        }
+      }
+    });
+    return items;
+  }
+
+  function aplicarCorrecaoItensCasados() {
+    let notificacoes = [];
+    
+    // Limpar sinalizações anteriores
+    currentItems.forEach(it => { delete it.autoCorrected; delete it.correctionType; });
+
+    paresCasados.forEach(p => {
+      let qtyPorCodigo = {};
+      currentItems.forEach(it => {
+        qtyPorCodigo[it.code] = (qtyPorCodigo[it.code] || 0) + (parseInt(it.qty, 10) || 0);
+      });
+
+      const temA = Object.prototype.hasOwnProperty.call(qtyPorCodigo, p.codigoA);
+      const temB = Object.prototype.hasOwnProperty.call(qtyPorCodigo, p.codigoB);
+      const nomeConjunto = p.nome ? ` (${p.nome})` : '';
+
+      if (temA && !temB) {
+        let qtdA = qtyPorCodigo[p.codigoA];
+        let descNova = p.nome ? `${p.nome} - Par Automático` : `Par Casado (${p.codigoA})`;
+        currentItems.push({
+          code: p.codigoB,
+          desc: descNova,
+          qty: pad2(qtdA),
+          autoCorrected: true,
+          correctionType: 'Adicionado automaticamente'
+        });
+        notificacoes.push(`O código ${p.codigoB} foi preenchido automaticamente com a quantidade ${pad2(qtdA)} (par de ${p.codigoA}${nomeConjunto}).`);
+      } else if (temB && !temA) {
+        let qtdB = qtyPorCodigo[p.codigoB];
+        let descNova = p.nome ? `${p.nome} - Par Automático` : `Par Casado (${p.codigoB})`;
+        currentItems.push({
+          code: p.codigoA,
+          desc: descNova,
+          qty: pad2(qtdB),
+          autoCorrected: true,
+          correctionType: 'Adicionado automaticamente'
+        });
+        notificacoes.push(`O código ${p.codigoA} foi preenchido automaticamente com a quantidade ${pad2(qtdB)} (par de ${p.codigoB}${nomeConjunto}).`);
+      } else if (temA && temB) {
+        let qtdA = qtyPorCodigo[p.codigoA];
+        let qtdB = qtyPorCodigo[p.codigoB];
+        if (qtdA !== qtdB) {
+          currentItems.forEach(it => {
+            if (it.code === p.codigoB) {
+              it.qty = pad2(qtdA);
+              it.autoCorrected = true;
+              it.correctionType = 'Quantidade ajustada';
+            }
+          });
+          notificacoes.push(`A quantidade do código ${p.codigoB} foi ajustada automaticamente para ${pad2(qtdA)} para corresponder ao par ${p.codigoA}${nomeConjunto}.`);
+        }
+      }
+    });
+
+    return notificacoes;
+  }
+
+  async function processarPedidos() {
+    let allItems = [];
+    const textVal = document.getElementById('emailInput').value;
+    if(textVal.trim()) {
+      allItems = allItems.concat(parseEmailText(textVal));
+    }
+    if(excelBuffer) {
+      try {
+        await xlsx();
+        allItems = allItems.concat(parseExcelData(excelBuffer));
+      } catch(err) {
+        alert("Erro ao ler arquivo Excel. Verifique o formato.");
+      }
+    }
+    currentItems = allItems;
+    
+    let notificacoesCorrecao = aplicarCorrecaoItensCasados();
+    renderTable();
+
+    if(notificacoesCorrecao.length > 0) {
+      const pairAlertBox = document.getElementById('pairAlertBox');
+      const pairAlertList = document.getElementById('pairAlertList');
+      const pairAlertTitle = document.getElementById('pairAlertTitle') || pairAlertBox.querySelector('strong');
+      pairAlertList.innerHTML = notificacoesCorrecao.map(m => `<li>${h(m)}</li>`).join('');
+      pairAlertBox.style.background = '#eff6ff';
+      pairAlertBox.style.border = '1px solid #3b82f6';
+      pairAlertBox.style.color = '#1e40af';
+      if(pairAlertTitle) pairAlertTitle.textContent = 'ℹ️ Correção Automática de Itens Casados (Destaque Aplicado):';
+      pairAlertBox.classList.add('show');
+    }
+  }
+
+  function renderTable() {
+    const tbody = document.getElementById('tableBody');
+    const outputArea = document.getElementById('outputArea');
+    const itemCountBadge = document.getElementById('itemCountBadge');
+    const totalQtdBadge = document.getElementById('totalQtdBadge');
+    const alertBox = document.getElementById('alertBox');
+    const pairAlertBox = document.getElementById('pairAlertBox');
+    const pairAlertList = document.getElementById('pairAlertList');
+
+    itemCountBadge.textContent = currentItems.length + (currentItems.length === 1 ? ' item' : ' itens');
+
+    if(currentItems.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#94a3b8; padding:30px;">Nenhum item na tabela</td></tr>';
+      outputArea.textContent = 'Nenhum pedido processado ainda...';
+      totalQtdBadge.textContent = 'Total Qtd: 0';
+      alertBox.classList.remove('show');
+      pairAlertBox.classList.remove('show');
+      return;
+    }
+
+    const counts = {};
+    currentItems.forEach(it => counts[it.code] = (counts[it.code] || 0) + 1);
+    let hasDupes = false;
+
+    const qtyPorCodigo = {};
+    currentItems.forEach(it => {
+      qtyPorCodigo[it.code] = (qtyPorCodigo[it.code] || 0) + (parseInt(it.qty, 10) || 0);
+    });
+
+    const codigosDivergentes = new Set();
+    const mensagensPares = [];
+    paresCasados.forEach(p => {
+      const temA = Object.prototype.hasOwnProperty.call(qtyPorCodigo, p.codigoA);
+      const temB = Object.prototype.hasOwnProperty.call(qtyPorCodigo, p.codigoB);
+      const nomeConjunto = p.nome ? ` (${p.nome})` : '';
+
+      if(temA && temB) {
+        if(qtyPorCodigo[p.codigoA] !== qtyPorCodigo[p.codigoB]) {
+          codigosDivergentes.add(p.codigoA);
+          codigosDivergentes.add(p.codigoB);
+          mensagensPares.push(`Par${nomeConjunto}: ${p.codigoA} (qtd ${pad2(qtyPorCodigo[p.codigoA])}) e ${p.codigoB} (qtd ${pad2(qtyPorCodigo[p.codigoB])}) deveriam sair na mesma quantidade.`);
+        }
+      } else if(temA && !temB) {
+        codigosDivergentes.add(p.codigoA);
+        mensagensPares.push(`Par${nomeConjunto}: código ${p.codigoA} está no pedido, mas o par ${p.codigoB} não foi encontrado.`);
+      } else if(temB && !temA) {
+        codigosDivergentes.add(p.codigoB);
+        mensagensPares.push(`Par${nomeConjunto}: código ${p.codigoB} está no pedido, mas o par ${p.codigoA} não foi encontrado.`);
+      }
+    });
+
+    let html = '';
+    let totalQty = 0;
+    let outputLines = [];
+
+    currentItems.forEach((it, idx) => {
+      let isDup = counts[it.code] > 1;
+      let isPairMismatch = codigosDivergentes.has(it.code);
+      let isAuto = it.autoCorrected;
+      if(isDup) hasDupes = true;
+      totalQty += parseInt(it.qty, 10) || 0;
+      outputLines.push(it.code + '\t' + it.qty);
+
+      let rowClass = isDup ? 'cv-dup' : (isPairMismatch ? 'cv-pm' : (isAuto ? 'cv-ac' : ''));
+      let badgeHtml = isAuto ? `<span class="cv-auto" title="${h(it.correctionType)}">⚡ ${h(it.correctionType)}</span>` : '';
+
+      html += `<tr class="${rowClass}">
+        <td><span class="cv-edit" contenteditable="true" onblur="cv.updateItem(${idx}, 'code', this.textContent)">${h(it.code)}</span></td>
+        <td><span class="cv-edit" contenteditable="true" onblur="cv.updateItem(${idx}, 'desc', this.textContent)">${h(it.desc)}</span> ${badgeHtml}</td>
+        <td style="text-align:center;"><span class="cv-edit" contenteditable="true" onblur="cv.updateItem(${idx}, 'qty', this.textContent)">${h(it.qty)}</span></td>
+        <td style="text-align:center;">
+          <button onclick="cv.deleteItem(${idx})" title="Excluir" style="background:none; border:none; cursor:pointer; color:#dc2626; font-weight:bold; font-size:14px;">🗑️</button>
+        </td>
+      </tr>`;
+    });
+
+    tbody.innerHTML = html;
+    outputArea.textContent = outputLines.join('\n');
+    totalQtdBadge.textContent = 'Total Qtd: ' + totalQty;
+
+    if(hasDupes) {
+      alertBox.classList.add('show');
+    } else {
+      alertBox.classList.remove('show');
+    }
+
+    if(mensagensPares.length) {
+      pairAlertList.innerHTML = mensagensPares.map(m => `<li>${h(m)}</li>`).join('');
+      pairAlertBox.classList.add('show');
+    } else {
+      pairAlertBox.classList.remove('show');
+    }
+  }
+
+  function updateItem(idx, field, val) {
+    if(!currentItems[idx]) return;
+    val = val.trim();
+    if(field === 'code') currentItems[idx].code = val;
+    if(field === 'desc') currentItems[idx].desc = val;
+    if(field === 'qty') currentItems[idx].qty = pad2(val);
+    renderTable();
+  }
+
+  function deleteItem(idx) {
+    currentItems.splice(idx, 1);
+    renderTable();
+  }
+
+  function unificarDuplicados() {
+    const map = {};
+    currentItems.forEach(it => {
+      if(map[it.code]) {
+        let sum = (parseInt(map[it.code].qty, 10) || 0) + (parseInt(it.qty, 10) || 0);
+        map[it.code].qty = pad2(sum);
+      } else {
+        map[it.code] = { code: it.code, desc: it.desc, qty: it.qty };
+      }
+    });
+    currentItems = Object.values(map);
+    renderTable();
+  }
+
+  function limparTudo() {
+    document.getElementById('emailInput').value = '';
+    fileInput.value = '';
+    fileNameDisplay.textContent = '';
+    excelBuffer = null;
+    currentItems = [];
+    renderTable();
+  }
+
+  function copiarResultado() {
+    const text = document.getElementById('outputArea').textContent;
+    if(!text || text.includes('Nenhum pedido')) return;
+    navigator.clipboard.writeText(text).then(() => {
+      const btn = document.getElementById('copyBtn');
+      btn.textContent = 'Copiado!';
+      btn.style.background = '#16a34a';
+      setTimeout(() => {
+        btn.textContent = 'Copiar Código';
+        btn.style.background = '';
+      }, 1500);
+    });
+  }
+
+  window.cv = { processarPedidos, limparTudo, copiarResultado, unificarDuplicados, cadastrarPar, removerPar, updateItem, deleteItem };
 })();
 
 </script>
