@@ -134,6 +134,43 @@ label{display:block;text-align:left;font-weight:800;font-size:.9rem;color:#4d607
  input[type="text"]{font-size:1.3rem}
  .tab-btn{font-size:.75rem;padding:11px 5px}
 }
+@keyframes axUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+@keyframes axPop{0%{transform:scale(.3);opacity:0}70%{transform:scale(1.12)}100%{transform:scale(1);opacity:1}}
+@keyframes axSk{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.tab-conteudo.ativo{animation:axUp .38s cubic-bezier(.2,.8,.2,1)}.fila-item{animation:axUp .3s both}
+#secao-sucesso .icon{animation:axPop .6s cubic-bezier(.2,.9,.3,1.2)}
+body.logado .celebration,body.logado p.subtitle,body.logado hr,body.logado .container>h2,body.logado .user-info{display:none}
+body.logado .container{padding-bottom:100px}
+#appbar{display:none;align-items:center;gap:10px;margin:-4px 0 14px;text-align:left}body.logado #appbar{display:flex}
+#appbar img{width:38px;height:38px;border-radius:50%;border:2px solid var(--primary-light)}
+#appbar .nm{flex:1;min-width:0;font-weight:800;font-size:.9rem;line-height:1.15;color:var(--primary)}
+#appbar small{display:block;color:var(--muted);font-weight:600;font-size:.7rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ax-btn{width:auto;margin:0;padding:8px 12px;font-size:.78rem;border-radius:10px}.ax-btn.sec{background:#edf2f9;color:var(--text);box-shadow:none}
+body.logado .tabs{position:fixed;left:50%;bottom:10px;transform:translateX(-50%);width:min(460px,calc(100% - 20px));margin:0;padding:6px;background:rgba(255,255,255,.96);backdrop-filter:blur(12px);border-radius:20px;box-shadow:0 10px 30px rgba(0,15,55,.35);z-index:50}
+.tab-btn{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:.66rem;padding:8px 2px;line-height:1.1;transition:background .25s,color .25s}
+.tab-btn:before{font-size:1.15rem;transition:transform .25s}.tab-btn.active:before{transform:translateY(-2px) scale(1.2)}
+#btn-tab-checkin:before{content:"📍"}#btn-tab-fila:before{content:"🕒"}#btn-tab-doca:before{content:"🚪"}#btn-tab-loja:before{content:"🏬"}#btn-tab-historico:before{content:"🧾"}
+#ax-card{display:none;margin:0 0 14px;padding:14px 16px;border-radius:16px;background:linear-gradient(135deg,#eaf3ff,#fff);border:2px solid var(--primary-light);text-align:left}
+#ax-card.on{display:block;animation:axUp .4s}.ax-pos{font-size:2.6rem;font-weight:900;color:var(--primary);line-height:1}.ax-s{font-size:.8rem;color:var(--muted);margin-top:2px}
+.ax-st{display:flex;gap:6px;margin-top:12px}.ax-st i{flex:1;height:6px;border-radius:4px;background:#d5e1f2}.ax-st i.on{background:linear-gradient(90deg,var(--primary),var(--primary-light))}
+.ax-stl{display:flex;justify-content:space-between;font-size:.68rem;color:var(--muted);margin-top:4px;font-weight:700}
+#ax-call{position:fixed;inset:0;z-index:9999;display:none;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:24px;text-align:center;color:#fff;background:linear-gradient(160deg,#021d4d,#087cf0)}#ax-call.on{display:flex;animation:axUp .3s}
+#ax-modal,#ax-not{position:fixed;inset:0;z-index:9998;display:none;align-items:center;justify-content:center;background:rgba(2,29,77,.55);padding:20px}#ax-modal.on,#ax-not.on{display:flex}
+.ax-bx{background:#fff;border-radius:18px;padding:20px;max-width:380px;width:100%;text-align:left;white-space:pre-line;line-height:1.5;animation:axPop .3s}
+#ax-toasts{position:fixed;top:10px;left:50%;transform:translateX(-50%);z-index:9997;width:min(440px,calc(100% - 20px));display:flex;flex-direction:column;gap:8px}
+.ax-t{background:#0b3a8f;color:#fff;border-radius:12px;padding:10px 14px;font-size:.85rem;font-weight:700;box-shadow:0 8px 20px rgba(0,0,0,.3);animation:axUp .25s}
+#ax-off{display:none;position:fixed;top:0;left:0;right:0;background:#e30613;color:#fff;text-align:center;font-weight:800;font-size:.8rem;padding:6px;z-index:10000}body.off #ax-off{display:block}
+.ax-sk{height:66px;border-radius:10px;margin-bottom:10px;background:linear-gradient(90deg,#eef3fb 25%,#f8fbff 50%,#eef3fb 75%);background-size:200% 100%;animation:axSk 1.2s linear infinite}
+.ax-ch{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin:8px 0 0}.ax-ch button{width:auto;margin:0;padding:6px 12px;font-size:.8rem;background:#edf2f9;color:var(--primary);box-shadow:none;border-radius:20px}
+#placa.ok{border-color:var(--success)}#placa.bad{border-color:var(--red)}
+.ax-seg{display:flex;gap:6px;margin-bottom:12px}.ax-seg button{margin:0;padding:8px;font-size:.8rem;background:#edf2f9;color:var(--text);box-shadow:none}.ax-seg button.on{background:linear-gradient(135deg,var(--primary),var(--blue));color:#fff}
+#ax-go{background:linear-gradient(135deg,var(--primary),var(--blue))}
+@media(prefers-color-scheme:dark){.container{background:rgba(14,22,40,.97);color:#e6edf7}h2,#appbar .nm{color:#9cc3ff}
+.fila-item{background:#16213a;border-color:#27365a}.fila-placa{color:#e6edf7}.fila-pos{color:#7fb2ff}.fila-item.minha-viagem{background:#173055;border-color:#3b82f6}
+input[type=text]{background:#101a30;color:#9cc3ff;border-color:#27365a}label,.login-note{color:#a9b8d4}.security-note{background:#101a30;color:#a9b8d4}
+.tab-btn,.ax-seg button,.ax-btn.sec,.ax-ch button{background:#1b2744;color:#cfe0ff}.tab-btn.active,.ax-seg button.on{color:#fff}body.logado .tabs{background:rgba(14,22,40,.96)}
+.empty-msg{color:#7f90ad}#ax-card,.ax-bx{background:#16213a;color:#e6edf7}.ax-sk{background:linear-gradient(90deg,#16213a 25%,#1d2b4a 50%,#16213a 75%);background-size:200% 100%}}
+@media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important}}
 </style>
 </head>
 <body>
@@ -515,6 +552,131 @@ function iniciarListenerHistorico(){
   });
  },error=>console.error("Erro ao acompanhar histórico:",error));
 }
+</script>
+<script>
+/* Camada de melhorias do app do motorista (somente adições; a lógica original não é alterada) */
+(function () {
+  const $ = id => document.getElementById(id), esc = t => String(t == null ? "" : t).replace(/[<>&"]/g, "");
+  const ORDEM = ["checkin", "fila", "doca", "loja", "historico"], ct = document.querySelector(".container");
+  let ativa = "checkin", prev = null, saiu = null, unsub = null, pendEm = null, ip = null; const loaded = {}, cache = {};
+  const vib = p => { try { navigator.vibrate && navigator.vibrate(p); } catch (e) {} };
+  const souAdmin = () => auth.currentUser && (auth.currentUser.email || "").toLowerCase() === ADMIN_EMAIL;
+  ct.insertAdjacentHTML("afterbegin", '<div id="appbar"><img id="ax-av" alt=""><div class="nm"><span id="ax-nm"></span><small id="ax-em"></small></div><button type="button" class="ax-btn" id="ax-inst" style="display:none">Instalar</button><button type="button" class="ax-btn sec" id="ax-out">Sair</button></div>');
+  document.body.insertAdjacentHTML("beforeend", '<div id="ax-toasts"></div><div id="ax-modal"><div class="ax-bx"><div id="ax-msg"></div><button type="button" class="ax-btn" id="ax-ok" style="width:100%;margin-top:14px;padding:12px">OK</button></div></div><div id="ax-not"><div class="ax-bx"><b>🔔 Quer ser avisado quando for chamado?</b><div style="margin-top:8px">Ative as notificações para receber o aviso mesmo com o app fechado.</div><button type="button" class="ax-btn" id="ax-nok" style="width:100%;margin-top:14px;padding:12px">Ativar avisos</button><button type="button" class="ax-btn sec" id="ax-nno" style="width:100%;margin-top:8px;padding:12px">Agora não</button></div></div><div id="ax-call"></div><div id="ax-off">📡 Sem conexão — as informações podem estar desatualizadas</div>');
+  const card = document.createElement("div"); card.id = "ax-card"; $("area-logada").insertBefore(card, document.querySelector("#area-logada .tabs"));
+  const toast = (m, ms) => { const t = document.createElement("div"); t.className = "ax-t"; t.textContent = m; $("ax-toasts").appendChild(t); setTimeout(() => t.remove(), ms || 3500); };
+
+  // avisos do GPS/QR/erros dentro do app (mesma regra, só muda a apresentação)
+  window.alert = m => { m = String(m); if (m.indexOf("🔍") === 0) { toast(m.replace(/\n+/g, " · "), 4200); return; } $("ax-msg").textContent = m; $("ax-modal").classList.add("on"); };
+  $("ax-ok").onclick = () => $("ax-modal").classList.remove("on");
+  $("ax-out").onclick = () => auth.signOut();
+
+  // conexão e instalação
+  const rede = () => document.body.classList.toggle("off", !navigator.onLine); addEventListener("online", rede); addEventListener("offline", rede); rede();
+  addEventListener("beforeinstallprompt", e => { e.preventDefault(); ip = e; $("ax-inst").style.display = ""; });
+  $("ax-inst").onclick = async () => { if (!ip) return; ip.prompt(); await ip.userChoice; ip = null; $("ax-inst").style.display = "none"; };
+
+  // pedido de notificação com explicação
+  const origNot = window.solicitarPermissaoNotificacao;
+  window.solicitarPermissaoNotificacao = em => {
+    if (!("Notification" in window) || Notification.permission !== "default" || Date.now() - (+localStorage.getItem("cd84_notif_no") || 0) < 864e5) return origNot(em);
+    pendEm = em; $("ax-not").classList.add("on");
+  };
+  $("ax-nok").onclick = () => { $("ax-not").classList.remove("on"); origNot(pendEm); };
+  $("ax-nno").onclick = () => { localStorage.setItem("cd84_notif_no", Date.now()); $("ax-not").classList.remove("on"); };
+
+  // abas: skeleton, histórico e deslizar o dedo
+  const origAba = window.mudarAba;
+  window.mudarAba = function (n) {
+    origAba(n); ativa = n;
+    const id = { fila: "listaFila", doca: "listaDoca", loja: "listaLoja", historico: "listaHistorico" }[n];
+    if (id && !loaded[n] && !$(id).children.length) $(id).innerHTML = '<div class="ax-sk"></div>'.repeat(3);
+    loaded[n] = 1; if (n === "historico") hist();
+  };
+  let sx = 0, sy = 0;
+  ct.addEventListener("touchstart", e => { sx = e.touches[0].clientX; sy = e.touches[0].clientY; }, { passive: true });
+  ct.addEventListener("touchend", e => {
+    if (!document.body.classList.contains("logado") || !$("reader").classList.contains("hidden") || /INPUT|TEXTAREA/.test((e.target.tagName || ""))) return;
+    const dx = e.changedTouches[0].clientX - sx, dy = e.changedTouches[0].clientY - sy; if (Math.abs(dx) < 70 || Math.abs(dy) > 45) return;
+    const i = ORDEM.indexOf(ativa) + (dx < 0 ? 1 : -1); if (i >= 0 && i < ORDEM.length) window.mudarAba(ORDEM[i]);
+  }, { passive: true });
+
+  // placa: recentes + validação visual + sucesso
+  const LS = "cd84_placas", RX = /^[A-Z]{3}-[0-9][A-Z0-9][0-9]{2}$/, lerP = () => { try { return JSON.parse(localStorage.getItem(LS) || "[]"); } catch (e) { return []; } };
+  function chips() {
+    let c = $("ax-ch"); if (!c) { c = document.createElement("div"); c.id = "ax-ch"; c.className = "ax-ch"; $("placa").before(c); c.onclick = e => { const p = e.target.dataset && e.target.dataset.p; if (p) { $("placa").value = p; $("placa").dispatchEvent(new Event("input")); } }; }
+    c.innerHTML = lerP().map(p => `<button type="button" data-p="${esc(p)}">${esc(p)}</button>`).join("");
+  }
+  $("placa").addEventListener("input", () => { const v = $("placa").value; $("placa").classList.toggle("ok", RX.test(v)); $("placa").classList.toggle("bad", v.length >= 8 && !RX.test(v)); });
+  new MutationObserver(() => {
+    const s = $("secao-sucesso"); if (s.classList.contains("hidden") || s.dataset.ok) return; s.dataset.ok = 1; vib([120, 60, 200]);
+    const p = $("placa").value.trim().toUpperCase(); if (p) { try { localStorage.setItem(LS, JSON.stringify([p, ...lerP().filter(x => x !== p)].slice(0, 3))); } catch (e) {} chips(); }
+    s.insertAdjacentHTML("beforeend", '<button type="button" id="ax-go">Acompanhar minha posição</button>'); $("ax-go").onclick = () => window.mudarAba("fila");
+  }).observe($("secao-sucesso"), { attributes: true, attributeFilter: ["class"] });
+
+  // fila: esconde parte das placas dos outros (admin vê tudo)
+  new MutationObserver(() => { if (souAdmin()) return; document.querySelectorAll("#listaFila .fila-item:not(.minha-viagem) .fila-placa").forEach(e => { e.textContent = e.textContent.replace(/^([A-Z]{3}-)[0-9A-Z]{2}([0-9]{2})$/, "$1••$2"); }); }).observe($("listaFila"), { childList: true });
+
+  // histórico: minhas viagens x todos
+  function segInit() {
+    if ($("ax-seg")) return;
+    $("tab-historico").insertAdjacentHTML("afterbegin", '<div class="ax-seg" id="ax-seg"><button type="button" data-v="min">Minhas viagens</button><button type="button" data-v="all">Todos</button></div><div id="minhasViagens"></div>');
+    $("ax-seg").onclick = e => { if (e.target.dataset.v) seg(e.target.dataset.v); }; seg(souAdmin() ? "all" : "min");
+  }
+  function seg(v) {
+    document.querySelectorAll("#ax-seg button").forEach(b => b.classList.toggle("on", b.dataset.v === v));
+    $("minhasViagens").style.display = v === "min" ? "" : "none"; ["listaHistorico", "msgHistoricoVazio"].forEach(i => $(i).style.display = v === "all" ? "" : "none");
+    if (v === "min") hist();
+  }
+  async function hist() {
+    const em = auth.currentUser && auth.currentUser.email.toLowerCase(), s = $("ax-seg"), box = $("minhasViagens"); if (!em || !s || s.querySelector(".on").dataset.v !== "min") return;
+    if (Date.now() - (cache.t || 0) > 60000) {
+      box.innerHTML = '<div class="ax-sk"></div>'.repeat(2);
+      try { const r = await db.collection("fila_patio").where("email", "==", em).get(); cache.l = r.docs.map(d => d.data()).filter(x => x.timestampSaida && x.status !== "Cancelado").sort((a, b) => b.timestampSaida - a.timestampSaida).slice(0, 10); cache.t = Date.now(); }
+      catch (e) { box.innerHTML = '<div class="empty-msg">Não foi possível carregar.</div>'; return; }
+    }
+    box.innerHTML = cache.l.length ? cache.l.map(x => { const d = new Date(x.timestampSaida); return `<div class="fila-item"><div><div class="fila-placa">${esc(x.placa)}</div><div class="fila-sub">${esc(x.filial || "-")} · ${d.toLocaleDateString("pt-BR")} às ${d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</div></div><span class="badge" style="background-color:#ffe8d6;color:var(--travel)">${x.status === "Em Viagem" ? "Em Viagem" : "Concluída"}</span></div>`; }).join("") : '<div class="empty-msg">Você ainda não tem viagens registradas.</div>';
+  }
+
+  // cartão "Meu veículo", aviso de chamada e de vez
+  const steps = i => `<div class="ax-st">${[0, 1, 2].map(k => `<i class="${k <= i ? "on" : ""}"></i>`).join("")}</div><div class="ax-stl"><span>Aguardando</span><span>Em doca</span><span>Em viagem</span></div>`;
+  function beep() { try { const a = new (window.AudioContext || window.webkitAudioContext)(); [0, .3, .6].forEach(t => { const o = a.createOscillator(), g = a.createGain(); o.frequency.value = 880; g.gain.value = .15; o.connect(g); g.connect(a.destination); o.start(a.currentTime + t); o.stop(a.currentTime + t + .2); }); } catch (e) {} }
+  function chamado(v) {
+    const c = $("ax-call");
+    c.innerHTML = `<div style="font-size:4rem">🚛</div><h1 style="margin:0;font-size:2rem">Você foi chamado!</h1><div style="font-size:1.1rem;line-height:1.7">Placa <b>${esc(v.placa)}</b><br>Doca <b style="font-size:2.6rem">${esc(v.doca || "-")}</b><br>Loja: <b>${esc(v.filial || "-")}</b><br>Conferente: <b>${esc(v.conferente || "-")}</b></div><button type="button" class="ax-btn" id="ax-cok" style="background:#fff;color:#073b95;padding:14px 32px;font-size:1rem;margin-top:12px">Entendi</button>`;
+    c.classList.add("on"); $("ax-cok").onclick = () => c.classList.remove("on"); vib([300, 150, 300, 150, 600]); beep();
+  }
+  function desenha(v, pos, n, doca) {
+    if (!v && !saiu) { card.className = ""; return; }
+    let h;
+    if (!v) h = `<b style="font-size:1.1rem">🚚 Boa viagem!</b><div class="ax-s">Saída de ${esc(saiu)} registrada.</div><button type="button" class="ax-btn sec" id="ax-x" style="margin-top:8px">Fechar</button>`;
+    else if (v.status === "Aguardando") {
+      const t = doca.map(d => d.timestampChamada).filter(Boolean).sort((a, b) => a - b), iv = t.length >= 3 ? (t[t.length - 1] - t[0]) / (t.length - 1) : 0, min = Math.round(pos * iv / 6e4);
+      h = `<div style="display:flex;align-items:center;gap:14px"><div class="ax-pos">${pos}º</div><div><b>${esc(v.placa)}</b><div class="ax-s">na fila · ${n} aguardando${min > 0 && min < 300 ? " · ≈ " + min + " min (estimativa)" : ""}</div></div></div>` + steps(0);
+    } else h = `<b>🚛 ${esc(v.placa)} — chamado!</b><div class="ax-s">Doca <b>${esc(v.doca || "-")}</b> · Loja <b>${esc(v.filial || "-")}</b> · Conferente <b>${esc(v.conferente || "-")}</b></div>` + steps(1);
+    card.innerHTML = h; card.className = "on"; const x = $("ax-x"); if (x) x.onclick = () => { saiu = null; desenha(null, 0, 0, []); };
+  }
+  function iniciar(email) {
+    if (unsub) unsub();
+    unsub = db.collection("fila_patio").where("status", "in", ["Aguardando", "Em Doca"]).onSnapshot(s => {
+      const m = {}; s.forEach(d => { const x = d.data(); if (!x.placa) return; const k = x.placa.toUpperCase(); if (!m[k] || (x.timestampChegada || 0) > (m[k].timestampChegada || 0)) m[k] = x; });
+      const l = Object.values(m), fila = l.filter(v => v.status === "Aguardando").sort((a, b) => a.timestampChegada - b.timestampChegada), doca = l.filter(v => v.status === "Em Doca");
+      const meus = l.filter(v => v.email && v.email.toLowerCase() === email).sort((a, b) => (a.status === "Em Doca" ? -1 : 1) - (b.status === "Em Doca" ? -1 : 1) || (b.timestampChegada || 0) - (a.timestampChegada || 0));
+      const v = meus[0], pos = v && v.status === "Aguardando" ? fila.indexOf(v) + 1 : 0, cur = v ? { placa: v.placa, status: v.status, pos } : null;
+      if (prev && cur && prev.placa === cur.placa) {
+        if (prev.status === "Aguardando" && cur.status === "Em Doca") chamado(v);
+        else if (cur.status === "Aguardando" && cur.pos !== prev.pos && cur.pos <= 2) { toast(cur.pos === 1 ? "🚚 Você é o próximo!" : "⏳ Só 1 veículo na sua frente", 5000); vib([200, 100, 200]); }
+      }
+      if (!cur && prev && prev.status === "Em Doca") saiu = prev.placa; if (cur) saiu = null;
+      prev = cur; desenha(v, pos, fila.length, doca);
+    }, () => {});
+  }
+  auth.onAuthStateChanged(u => {
+    document.body.classList.toggle("logado", !!u);
+    if (u) { $("ax-av").src = u.photoURL || ""; $("ax-av").style.display = u.photoURL ? "" : "none"; $("ax-nm").textContent = u.displayName || "Motorista"; $("ax-em").textContent = u.email; chips(); segInit(); iniciar((u.email || "").toLowerCase()); }
+    else { if (unsub) { unsub(); unsub = null; } prev = null; saiu = null; card.className = ""; }
+  });
+})();
 </script>
 </body>
 </html>
