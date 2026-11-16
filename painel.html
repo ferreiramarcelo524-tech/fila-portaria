@@ -97,6 +97,13 @@ iframe{border-radius:22px}
 @keyframes popvi{from{opacity:0;transform:scale(.92) translateY(-6px)}to{opacity:1;transform:none}}
 .px-chip{display:inline-flex;align-items:center;gap:6px;background:linear-gradient(135deg,#eef3ff,#e3ecff);border:1px solid #d6e2ff;border-radius:14px;padding:5px 12px;margin:4px;font-size:.85rem;transition:transform .15s}.px-chip:hover{transform:translateY(-1px)}
 .px-chip i{font-style:normal;cursor:pointer;color:#e5324b;font-weight:800;transition:transform .15s}.px-chip i:hover{transform:scale(1.35)}
+#ed-back{position:fixed;inset:0;background:rgba(10,31,92,.45);backdrop-filter:blur(3px);z-index:9999;display:none;align-items:center;justify-content:center;padding:16px}#ed-back.on{display:flex}
+.ed-card{background:#fff;border-radius:22px;padding:20px;width:100%;max-width:400px;box-shadow:0 30px 70px rgba(10,31,92,.4);animation:popvi .25s cubic-bezier(.2,.9,.3,1.2);max-height:92vh;overflow:auto}
+.ed-h{display:flex;justify-content:space-between;align-items:center;font-size:1.15rem;color:var(--ink);margin-bottom:10px}
+.ed-l{display:block;font-size:.66rem;text-transform:uppercase;letter-spacing:.08em;font-weight:800;color:#7a8aa8;margin-top:10px}
+.ed-l input{display:block;width:100%;margin-top:4px;padding:10px 12px;border:1px solid #e1e8f5;background:#f6f9ff;border-radius:11px;font:inherit;font-size:.95rem;color:var(--text-main);transition:border-color .2s,box-shadow .2s}
+.ed-l input:focus{outline:none;border-color:#6f93ff;background:#fff;box-shadow:0 0 0 4px rgba(31,91,255,.14)}
+.ed-b{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
 </style>
 </head>
 <body>
@@ -903,7 +910,7 @@ iframe{border-radius:22px}
                     <td>${new Date(v.timestampChegada).toLocaleTimeString('pt-BR')}</td>
                     <td><span class="badge status-${v.status.toLowerCase().replace(/ /g, '-')}">${v.status}</span></td>
                     <td>${v.status === 'Em Doca' ? `Doca: ${v.doca} (${v.conferente})` : '-'}</td>
-                    <td>${btnMover}${btnAcao}${btnEditar}${btnCancelar}</td>
+                    <td>${btnMover}${btnAcao}${btnEditar}${window.btnEditarVeiculo ? window.btnEditarVeiculo(v.id) : ""}${btnCancelar}</td>
                 `;
                 tabelaPatio.appendChild(tr);
             });
@@ -927,7 +934,7 @@ iframe{border-radius:22px}
                     <td>${v.timestampSaida ? new Date(v.timestampSaida).toLocaleTimeString('pt-BR') : '-'}</td>
                     <td><span class="badge status-em-viagem">Em Viagem</span></td>
                     <td>Doca: ${v.doca} (${v.conferente})</td>
-                    <td>${btnRetornar}${btnConcluir}</td>
+                    <td>${btnRetornar}${window.btnEditarVeiculo ? window.btnEditarVeiculo(v.id) : ""}${btnConcluir}</td>
                 `;
                 tabelaViagem.appendChild(tr);
             });
@@ -953,7 +960,7 @@ iframe{border-radius:22px}
                     <td>${v.motorista}<br><small style="color:#7f8c8d">${v.email}</small></td>
                     <td>${v.doca || '-'}</td>
                     <td>${v.conferente || '-'}</td>
-                    <td>${btnLiberarDoca}${btnDevolver}</td>
+                    <td>${btnLiberarDoca}${btnDevolver}${window.btnEditarVeiculo ? window.btnEditarVeiculo(v.id) : ""}</td>
                 `;
                 tabelaDoca.appendChild(tr);
             });
@@ -1722,6 +1729,61 @@ iframe{border-radius:22px}
     Promise.all(l.map(k => db.collection("lojas_proximas").doc(k).set({ codigo: k }))).then(() => document.getElementById("px-in").value = "").catch(e => alert("Erro ao salvar: " + e.message));
   };
   box.addEventListener("click", e => { const k = e.target.dataset && e.target.dataset.pxDel; if (k && logado()) db.collection("lojas_proximas").doc(k).delete(); });
+})();
+
+</script>
+<script>
+/* Editar dados do veículo (aba Operação / Doca) */
+(function () {
+  const db = firebase.firestore();
+  const esc = t => String(t == null ? "" : t).replace(/[<>&"]/g, "");
+  const RX = /^[A-Z]{3}-[0-9][A-Z0-9][0-9]{2}$/;
+  window.btnEditarVeiculo = id => `<button type="button" class="btn-action btn-edit" onclick="editarVeiculo('${id}')">✎ Editar</button>`;
+  const back = document.createElement("div"); back.id = "ed-back"; document.body.appendChild(back);
+  const fecha = () => back.classList.remove("on");
+  back.addEventListener("click", e => { if (e.target === back || e.target.closest("[data-ed-x]")) fecha(); });
+  document.addEventListener("keydown", e => { if (e.key === "Escape") fecha(); });
+  const val = id => document.getElementById(id).value.trim();
+  const campo = (id, rot, v, extra) => `<label class="ed-l">${rot}<input id="${id}" value="${esc(v)}" ${extra || ""}></label>`;
+  window.editarVeiculo = async id => {
+    if (typeof usuarioLogado === "undefined" || !usuarioLogado) { alert("Acesso negado! Faça o login de administrador primeiro."); return; }
+    const ref = db.collection("fila_patio").doc(id), s = await ref.get();
+    if (!s.exists) return alert("Registro não encontrado.");
+    const d = s.data(), rota = d.status !== "Aguardando", lim = v => (v === "-" ? "" : v);
+    back.innerHTML = `<div class="ed-card"><div class="ed-h"><b>Editar veículo</b><button type="button" class="vi-x" data-ed-x title="Fechar">✕</button></div>
+      ${campo("ed-placa", "Placa", d.placa, 'maxlength="8" autocomplete="off" style="text-transform:uppercase;font-weight:800;letter-spacing:1px"')}
+      ${campo("ed-mot", "Motorista", d.motorista)}${campo("ed-email", "E-mail", d.email)}
+      ${rota ? campo("ed-filial", "Filial destino", lim(d.filial)) + campo("ed-doca", "Doca", lim(d.doca)) + campo("ed-conf", "Conferente", lim(d.conferente)) : ""}
+      <div class="ed-b"><button type="button" class="btn-action btn-cancel" data-ed-x>Cancelar</button><button type="button" class="btn-action btn-done" id="ed-ok">Salvar</button></div></div>`;
+    back.classList.add("on");
+    const pl = document.getElementById("ed-placa");
+    pl.oninput = () => { let v = pl.value.toUpperCase().replace(/[^A-Z0-9]/g, ""); if (v.length > 3) v = v.substring(0, 3) + "-" + v.substring(3, 7); pl.value = v; };
+    document.getElementById("ed-ok").onclick = async () => {
+      const placa = val("ed-placa").toUpperCase();
+      if (!RX.test(placa)) return alert("🚫 FORMATO DE PLACA INVÁLIDO!\n\nExemplo correto: AAA-0A00");
+      if (!val("ed-mot")) return alert("Informe o nome do motorista.");
+      try {
+        if (placa !== d.placa) {
+          const q = await db.collection("fila_patio").where("status", "in", ["Aguardando", "Em Doca"]).get();
+          if (q.docs.some(x => x.id !== id && (x.data().placa || "").toUpperCase() === placa)) return alert("🚫 Este veículo (" + placa + ") já está registrado no pátio.");
+        }
+        const upd = { placa, motorista: val("ed-mot"), email: val("ed-email").toLowerCase() };
+        if (rota) { upd.filial = val("ed-filial") || "-"; upd.doca = val("ed-doca") || "-"; upd.conferente = val("ed-conf") || "-"; }
+        const b = db.batch(); b.update(ref, upd);
+        if (placa !== d.placa) {   // mantém as linhas da Expedição apontando para a placa corrigida
+          const rs = await db.collection("docas_carregamentos").get(), tr = a => (a || []).map(p => p === d.placa ? placa : p);
+          rs.forEach(r => {
+            const x = r.data(), ch = {}, l = String(x.veiculo || "").split(",").map(p => p.trim()).filter(Boolean);
+            if (l.includes(d.placa)) ch.veiculo = tr(l).join(", ");
+            if ((x.saiu || []).includes(d.placa)) ch.saiu = tr(x.saiu);
+            if ((x.removidos || []).includes(d.placa)) ch.removidos = tr(x.removidos);
+            if (Object.keys(ch).length) b.update(r.ref, ch);
+          });
+        }
+        await b.commit(); fecha();
+      } catch (e) { alert("Erro ao salvar: " + e.message); }
+    };
+  };
 })();
 
 </script>
