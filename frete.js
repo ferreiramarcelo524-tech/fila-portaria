@@ -398,25 +398,20 @@ function renderVeiculos() {
     corpo.appendChild(tr);
   });
 }
-function vIncluir() {
+async function vIncluir() {
   if (!logado()) return;
-  const p = (prompt('Placa do veículo (AAA-0A00):') || '').trim().toUpperCase();
-  if (!p) return;
-  if (!/^[A-Z]{3}-[0-9][A-Z0-9][0-9]{2}$/.test(p)) { alert('Formato de placa inválido. Exemplo: AAA-0A00'); return; }
-  if (mveic[normP(p)] && !confirm('Esta placa já está cadastrada. Substituir os dados?')) return;
   const tipos = tiposLista();
-  const t = (prompt('Porte / tipo (digite o código):\n' + tipos.map(x => x.cod + ' = ' + x.nome).join('\n')) || '').trim();
-  if (!tipos.some(x => x.cod === t)) { alert('Tipo inválido.'); return; }
-  const prop = (prompt('Proprietário / motorista (opcional):') || '').trim();
-  const obs = (prompt('Observação (opcional):') || '').trim();
-  db.collection('veiculos_frete').doc(normP(p)).set({ placa: p, tipoCod: t, proprietario: prop, obs }, { merge: true }).catch(e => alert('Erro ao salvar: ' + e.message));
+  const r = await window.cd84Form({ title: 'Incluir veículo', sub: 'Porte: ' + tipos.map(x => x.cod + ' = ' + x.nome).join(' · '), fields: [{ id: 'p', label: 'Placa', placeholder: 'AAA-0A00', placa: 1, required: 1, max: 8 }, { id: 't', label: 'Porte / tipo (código)', required: 1 }, { id: 'o', label: 'Proprietário / motorista (opcional)' }, { id: 'b', label: 'Observação (opcional)' }], ok: 'Salvar', validate: x => tipos.some(t => t.cod === x.t) ? '' : 'Tipo inválido. Use um dos códigos informados acima.' });
+  if (!r) return;
+  if (mveic[normP(r.p)] && !confirm('Esta placa já está cadastrada. Substituir os dados?')) return;
+  db.collection('veiculos_frete').doc(normP(r.p)).set({ placa: r.p, tipoCod: r.t, proprietario: r.o, obs: r.b }, { merge: true }).catch(e => alert('Erro ao salvar: ' + e.message));
 }
-function vEditar(id) {
+async function vEditar(id) {
   if (!logado()) return;
   const v = mveic[id]; if (!v) return;
-  const prop = prompt('Proprietário / motorista:', v.proprietario || ''); if (prop === null) return;
-  const obs = prompt('Observação:', v.obs || ''); if (obs === null) return;
-  db.collection('veiculos_frete').doc(id).update({ proprietario: prop.trim(), obs: obs.trim() }).catch(e => alert('Erro: ' + e.message));
+  const r = await window.cd84Form({ title: 'Editar veículo ' + v.placa, fields: [{ id: 'o', label: 'Proprietário / motorista', value: v.proprietario || '' }, { id: 'b', label: 'Observação', value: v.obs || '' }], ok: 'Salvar' });
+  if (!r) return;
+  db.collection('veiculos_frete').doc(id).update({ proprietario: r.o, obs: r.b }).catch(e => alert('Erro: ' + e.message));
 }
 function vExcluir(id) {
   if (!logado()) return;
@@ -445,33 +440,22 @@ function renderTabela() {
 }
 
 /* ---------- Edição da tabela de frete ---------- */
-function incluir() {
+async function incluir() {
   if (!logado()) return;
-  const cod = (prompt('Código da filial (ex: 46):') || '').trim();
-  if (!/^\d+$/.test(cod)) return;
-  const ex = tabela.find(r => r.codigo === cod);
-  const nome = (prompt('Nome completo da loja (ex: 46 - MATEUS SUPERMERCADOS S.A. SUPER MAGUARI):', ex ? ex.nome : cod + ' - ') || '').trim();
-  if (!nome) return;
   const tipos = tiposLista();
-  const t = (prompt('Tipo do caminhão (digite o código):\n' + tipos.map(x => x.cod + ' = ' + x.nome).join('\n') + '\n\nOu digite um código novo.') || '').trim();
-  if (!/^\d+$/.test(t)) return;
-  let tn = (tipos.find(x => x.cod === t) || {}).nome;
-  if (!tn) { tn = (prompt('Código novo. Nome do tipo (ex: TRUCK BAU CARGA SECA):') || '').trim(); if (!tn) return; }
-  const valor = num(prompt('Valor do frete (R$), ex: 4.450,00:'));
-  if (isNaN(valor)) { alert('Valor inválido.'); return; }
-  const dist = parseFloat(prompt('Distância em km (opcional):') || '') || 0;
-  const id = cod + '_' + t;
+  const r = await window.cd84Form({ title: 'Incluir frete', sub: 'Tipos: ' + tipos.map(x => x.cod + ' = ' + x.nome).join(' · ') + ' — ou informe um código novo e o nome do tipo.', fields: [{ id: 'c', label: 'Código da filial', placeholder: '46', required: 1 }, { id: 'n', label: 'Nome completo da loja', placeholder: '46 - MATEUS SUPERMERCADOS S.A. SUPER MAGUARI', required: 1 }, { id: 't', label: 'Tipo do caminhão (código)', required: 1 }, { id: 'tn', label: 'Nome do tipo (só se o código for novo)', placeholder: 'TRUCK BAU CARGA SECA' }, { id: 'v', label: 'Valor do frete (R$)', placeholder: '4.450,00', required: 1 }, { id: 'd', label: 'Distância em km (opcional)' }], ok: 'Salvar',
+    validate: x => !/^\d+$/.test(x.c) ? 'Código da filial inválido.' : !/^\d+$/.test(x.t) ? 'Código do tipo inválido.' : (!tipos.some(t => t.cod === x.t) && !x.tn) ? 'Código de tipo novo: informe o nome do tipo.' : isNaN(num(x.v)) ? 'Valor inválido.' : '' });
+  if (!r) return;
+  const cod = r.c, t = r.t, tn = (tipos.find(x => x.cod === t) || {}).nome || r.tn, valor = num(r.v), dist = parseFloat(r.d || '') || 0, id = cod + '_' + t;
   if (mapa[id] && !confirm('Já existe frete para esta filial e tipo (' + BRL(mapa[id].valor) + '). Substituir?')) return;
-  db.collection('tabela_frete').doc(id).set({ codigo: cod, nome, tipoCod: t, tipoNome: tn, valor, distancia: dist }, { merge: true }).catch(e => alert('Erro ao salvar: ' + e.message));
+  db.collection('tabela_frete').doc(id).set({ codigo: cod, nome: r.n, tipoCod: t, tipoNome: tn, valor, distancia: dist }, { merge: true }).catch(e => alert('Erro ao salvar: ' + e.message));
 }
-function editar(id) {
+async function editar(id) {
   if (!logado()) return;
-  const r = tabela.find(x => x.id === id); if (!r) return;
-  const nome = prompt('Nome da loja:', r.nome); if (nome === null) return;
-  const v = prompt('Valor do frete (R$):', String(r.valor).replace('.', ',')); if (v === null) return;
-  const valor = num(v); if (isNaN(valor)) { alert('Valor inválido.'); return; }
-  const d = prompt('Distância (km):', r.distancia || 0); if (d === null) return;
-  db.collection('tabela_frete').doc(r.id).update({ nome: nome.trim(), valor, distancia: parseFloat(d) || 0 }).catch(e => alert('Erro: ' + e.message));
+  const r0 = tabela.find(x => x.id === id); if (!r0) return;
+  const r = await window.cd84Form({ title: 'Editar frete — filial ' + r0.codigo, fields: [{ id: 'n', label: 'Nome da loja', value: r0.nome, required: 1 }, { id: 'v', label: 'Valor do frete (R$)', value: String(r0.valor).replace('.', ','), required: 1 }, { id: 'd', label: 'Distância (km)', value: String(r0.distancia || 0) }], ok: 'Salvar', validate: x => isNaN(num(x.v)) ? 'Valor inválido.' : '' });
+  if (!r) return;
+  db.collection('tabela_frete').doc(r0.id).update({ nome: r.n, valor: num(r.v), distancia: parseFloat(r.d) || 0 }).catch(e => alert('Erro: ' + e.message));
 }
 function excluir(id) {
   if (!logado()) return;
@@ -553,9 +537,10 @@ sec.addEventListener('click', e => {
   else if (ac === 'filial') {
     if (!logado()) return;
     const c = cargas.find(x => x.id === id); if (!c) return;
-    const nv = prompt('Filial destino (use o número inicial; para várias lojas separe por "/", ex: 46 / 52):', c.filial || '');
-    if (nv === null) return;
-    db.collection('fila_patio').doc(id).update({ filial: nv.trim() }).then(() => { c.filial = nv.trim(); c.calc = calcular(c); renderTudo(); }).catch(er => alert('Erro: ' + er.message));
+    window.cd84Form({ title: 'Filial destino da carga', sub: 'Use o número inicial; para várias lojas separe por "/", ex.: 46 / 52', fields: [{ id: 'f', label: 'Filial destino', value: c.filial || '', list: 'dl-f' }], ok: 'Salvar' }).then(r => {
+      if (!r) return; const nv = r.f;
+      db.collection('fila_patio').doc(id).update({ filial: nv }).then(() => { c.filial = nv; c.calc = calcular(c); renderTudo(); }).catch(er => alert('Erro: ' + er.message));
+    });
   }
 });
 sec.addEventListener('change', e => {
