@@ -249,7 +249,8 @@ html.mobile #tab-frete .tabs{background:var(--m-card2)!important;box-shadow:none
 #vp-pop{position:fixed;width:min(340px,calc(100vw - 16px));max-height:70vh;overflow:auto;background:rgba(255,255,255,.98);backdrop-filter:blur(16px);border-radius:20px;box-shadow:0 24px 60px rgba(10,31,92,.35);border:1px solid #e3e9f5;padding:14px;animation:popvi .22s cubic-bezier(.2,.9,.3,1.2);transform-origin:top left}
 .vp-it{display:flex;align-items:center;gap:10px;width:100%;text-align:left;border:0;background:#f4f8ff;border-radius:12px;padding:10px 12px;margin-bottom:6px;cursor:pointer;font-family:inherit;font-size:.9rem;transition:transform .15s,background .2s}
 .vp-it:hover{background:#e6efff;transform:translateX(3px)}.vp-it b{color:var(--primary);min-width:30px}.vp-it span{font-weight:800;flex:1}.vp-it small{color:#7a8aa8}
-tbody tr.rw-ok td{background:#f0faf6}tbody tr.rw-ok td:first-child{box-shadow:inset 4px 0 0 #12b886}tbody tr.rw-ok:hover td{background:#e6f6ee}
+tbody tr.rw-r td{background:#fff7f8}tbody tr.rw-r td:first-child{box-shadow:inset 5px 0 0 #e5324b}tbody tr.rw-y td{background:#fffbee}tbody tr.rw-y td:first-child{box-shadow:inset 5px 0 0 #f5b301}tbody tr.rw-g td{background:#f0faf6}tbody tr.rw-g td:first-child{box-shadow:inset 5px 0 0 #12b886}
+tbody tr.rw-r:hover td{background:#ffeef0}tbody tr.rw-y:hover td{background:#fff5d6}tbody tr.rw-g:hover td{background:#e6f6ee}
 .cal-g{display:grid;grid-template-columns:repeat(auto-fit,minmax(310px,1fr));gap:14px}
 .cal-day{background:linear-gradient(180deg,#fff,#f5f8ff);border:1px solid #e3e9f5;border-radius:20px;padding:12px;box-shadow:0 10px 26px rgba(31,91,255,.08);transition:transform .25s,box-shadow .25s}.cal-day:hover{transform:translateY(-3px);box-shadow:0 16px 34px rgba(31,91,255,.16)}
 .cal-h{display:flex;justify-content:space-between;align-items:center;margin:-12px -12px 10px;padding:12px 14px;border-radius:20px 20px 0 0;background:linear-gradient(115deg,#0a1f5c,#1746d1 60%,#2b86ff);color:#fff}
@@ -257,7 +258,7 @@ tbody tr.rw-ok td{background:#f0faf6}tbody tr.rw-ok td:first-child{box-shadow:in
 .cal-r{display:grid;grid-template-columns:118px 1fr 92px;gap:6px;margin-bottom:6px}.cal-r select,.cal-r input{min-width:0;width:100%!important}
 .cal-add{width:100%;border:1px dashed #b8c8ee;background:transparent;color:#1f5bff;border-radius:12px;padding:8px;font-family:inherit;font-weight:700;cursor:pointer;transition:all .2s}.cal-add:hover{background:#eef3ff;border-style:solid}
 html.mobile #vp-pop{left:8px!important;right:8px;top:auto!important;bottom:8px;width:auto!important;background:var(--m-bg);color:var(--m-text)}html.mobile .vp-it{background:var(--m-card);color:var(--m-text)}
-html.mobile #dc-corpo tr.rw-ok{border-color:#12b886!important;box-shadow:inset 4px 0 0 #12b886!important}html.mobile .cal-day{background:var(--m-card);border-color:var(--m-bd)}html.mobile .cal-r{grid-template-columns:104px 1fr 84px}html.mobile .cal-add{border-color:var(--m-bd)}
+html.mobile #dc-corpo tr.rw-r{border-color:#e5324b!important;box-shadow:inset 5px 0 0 #e5324b!important}html.mobile #dc-corpo tr.rw-y{border-color:#f5b301!important;box-shadow:inset 5px 0 0 #f5b301!important}html.mobile #dc-corpo tr.rw-g{border-color:#12b886!important;box-shadow:inset 5px 0 0 #12b886!important}html.mobile .cal-day{background:var(--m-card);border-color:var(--m-bd)}html.mobile .cal-r{grid-template-columns:104px 1fr 84px}html.mobile .cal-add{border-color:var(--m-bd)}
 </style>
 </head>
 <body>
@@ -1328,7 +1329,7 @@ html.mobile #dc-corpo tr.rw-ok{border-color:#12b886!important;box-shadow:inset 4
 
   // ---------- Dados ----------
   db.collection("docas_carregamentos").onSnapshot(s => {
-    ativos = s.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => (a.ordem || 0) - (b.ordem || 0)); carregou = true; desenhar(); totais(); autoPreencher();
+    ativos = s.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => (a.ordem || 0) - (b.ordem || 0)); carregou = true; desenhar(); totais(); autoPreencher(); sincFiliais();
   });
   const hoje = iso(new Date());
   db.doc("docas_resumo/dia_" + hoje).onSnapshot(d => { rDia = d.exists ? d.data().total || 0 : 0; totais(); });
@@ -1351,7 +1352,7 @@ html.mobile #dc-corpo tr.rw-ok{border-color:#12b886!important;box-shadow:inset 4
   db.collection("fila_patio").where("status", "in", ["Aguardando", "Em Doca"]).onSnapshot(s => {
     const m = {};
     s.docs.forEach(d => { const x = { id: d.id, ...d.data() }; if (!x.placa) return; const k = norm(x.placa); if (!m[k] || (x.timestampChegada || 0) > (m[k].timestampChegada || 0)) m[k] = x; });
-    filaMap = m; filaOk = true; desenhar();
+    filaMap = m; filaOk = true; desenhar(); sincFiliais();
   });
   db.collection("cubagem_veiculos").onSnapshot(s => {
     placas = s.docs.map(d => d.data()).sort((a, b) => a.placa.localeCompare(b.placa)); setTimeout(desenhar, 0);
@@ -1362,7 +1363,9 @@ html.mobile #dc-corpo tr.rw-ok{border-color:#12b886!important;box-shadow:inset 4
   let pend = false;
   const editando = () => { const a = document.activeElement; return a && a.closest && a.closest("#tab-docas") && /INPUT|SELECT|TEXTAREA/.test(a.tagName); };
   const chave = f => norm(f).replace(/^LOJA/, "");
-  const completo = x => (+x.valor || 0) > 0 && (veicAtivos(x).length > 0 || (x.saiu || []).length > 0);
+  const temVeic = x => veicAtivos(x).length > 0 || (x.saiu || []).length > 0;
+  const estadoCls = x => !(x.tipo && String(x.filial || "").trim() && String(x.doca || "").trim()) ? "" : ` class="${(+x.valor || 0) <= 0 ? "rw-r" : temVeic(x) ? "rw-g" : "rw-y"}"`;
+  const partes = v => { const f = String(v.filial || ""), a = f.split("/"); if (v.filialAuto && f === v.filialAuto && v.filialBase) a.push(v.filialBase); return a.map(chave).filter(Boolean); };
   function chipVeic(id, p, rem) {
     const v = filaMap[norm(p)], st = v ? v.status : "", saiu = filaOk && !v;
     const cor = st === "Em Doca" ? "#ffd9a8" : st === "Aguardando" ? "#cfe6ff" : "#dfe9df";
@@ -1372,7 +1375,7 @@ html.mobile #dc-corpo tr.rw-ok{border-color:#12b886!important;box-shadow:inset 4
   const saiuChip = p => `<span class="chip" style="background:#dfe9df;white-space:nowrap;margin:0" title="já saiu">✓ ${esc(p)}</span>`;
   function celVeic(x, usados) {
     const vs = (x.veiculo || "").split(",").map(s => s.trim()).filter(Boolean), todos = Object.values(filaMap);
-    const der = todos.filter(v => v.status === "Em Doca" && x.filial && chave(v.filial) === chave(x.filial) && !vs.includes(v.placa) && !(x.removidos || []).includes(v.placa)).map(v => v.placa);
+    const der = todos.filter(v => v.status === "Em Doca" && x.filial && partes(v).includes(chave(x.filial)) && !vs.includes(v.placa) && !(x.removidos || []).includes(v.placa)).map(v => v.placa);
     return `<div class="vcel">` + vs.map(p => chipVeic(x.id, p, true)).join("") + der.map(p => chipVeic(x.id, p, true)).join("") + (x.saiu || []).filter(p => !vs.includes(p)).map(saiuChip).join("") + `<button type="button" class="vadd" data-vadd="${x.id}">＋ veículo</button></div>`;
   }
   const vpBack = document.createElement("div"); vpBack.id = "vp-back"; document.body.appendChild(vpBack);
@@ -1380,7 +1383,7 @@ html.mobile #dc-corpo tr.rw-ok{border-color:#12b886!important;box-shadow:inset 4
   function abrirVeic(id, alvo) {
     const x = ativos.find(a => a.id === id); if (!x) return;
     const vs = (x.veiculo || "").split(",").map(s => s.trim()).filter(Boolean), todos = Object.values(filaMap);
-    const der = todos.filter(v => v.status === "Em Doca" && x.filial && chave(v.filial) === chave(x.filial) && !(x.removidos || []).includes(v.placa)).map(v => v.placa);
+    const der = todos.filter(v => v.status === "Em Doca" && x.filial && partes(v).includes(chave(x.filial)) && !(x.removidos || []).includes(v.placa)).map(v => v.placa);
     const livre = v => !vs.includes(v.placa) && !der.includes(v.placa), cub = p => cubTxt(p).replace(" · ", "");
     const it = (p, h) => `<button type="button" class="vp-it" data-vp="${esc(p)}">${h}</button>`;
     const ag = todos.filter(v => v.status === "Aguardando").sort((a, b) => (a.timestampChegada || 0) - (b.timestampChegada || 0)).map((v, i) => ({ v, pos: i + 1 })).filter(o => livre(o.v));
@@ -1425,7 +1428,7 @@ html.mobile #dc-corpo tr.rw-ok{border-color:#12b886!important;box-shadow:inset 4
     $("dc-corpo").innerHTML = ordenados().map(x => {
       const cor = (tipos.find(t => t.nome === x.tipo) || {}).cor || "#fff";
       const vs = (x.veiculo || "").split(",").map(s => s.trim()).filter(Boolean);
-      return `<tr data-id="${x.id}"${completo(x) ? ' class="rw-ok"' : ""}><td><input type="checkbox" data-sel="${x.id}"${sel.has(x.id) ? " checked" : ""}></td>
+      return `<tr data-id="${x.id}"${estadoCls(x)}><td><input type="checkbox" data-sel="${x.id}"${sel.has(x.id) ? " checked" : ""}></td>
       <td><select data-f="tipo" style="background:${cor};color:${lum(cor)};font-weight:700">${tipos.map(t => `<option${t.nome === x.tipo ? " selected" : ""}>${esc(t.nome)}</option>`).join("")}</select></td>
       <td><input data-f="filial" list="dl-f" value="${esc(x.filial)}" style="width:140px"></td>
       <td><input data-f="doca" list="dl-d" value="${esc(x.doca)}" style="width:130px"></td>
@@ -1463,7 +1466,7 @@ html.mobile #dc-corpo tr.rw-ok{border-color:#12b886!important;box-shadow:inset 4
     const ok = await db.runTransaction(async t => { const d = await t.get(ref); if (d.exists) return false; t.set(ref, { em: Date.now() }); return true; });
     if (ok) preencher(k, iso(new Date()));
   }
-  auth.onAuthStateChanged(() => autoPreencher());
+  auth.onAuthStateChanged(() => { autoPreencher(); sincFiliais(); });
   document.addEventListener("focusout", () => setTimeout(() => { if (pend && !editando()) { pend = false; desenhar(); desenharCal(); } }, 150));
   $("dc-corpo").addEventListener("change", e => {
     const f = e.target.dataset.f; if (!f || bloq()) return;
@@ -1483,13 +1486,31 @@ html.mobile #dc-corpo tr.rw-ok{border-color:#12b886!important;box-shadow:inset 4
       if ((skip || []).includes(a.id)) return;
       const l = (a.veiculo || "").split(",").map(s => s.trim()).filter(Boolean);
       const guardada = l.some(p => norm(p) === norm(f.placa));
-      const derivada = a.filial && f.filial && chave(a.filial) === chave(f.filial) && !(a.removidos || []).includes(f.placa);
+      const derivada = a.filial && f.filial && partes(f).includes(chave(a.filial)) && !(a.removidos || []).includes(f.placa);
       if (guardada || derivada) b.update(db.collection("docas_carregamentos").doc(a.id), { veiculo: l.filter(p => norm(p) !== norm(f.placa)).join(", "), saiu: F.arrayUnion(f.placa) });
     });
   };
+  const elegivel = x => /^(LOJA\s*)?\d/i.test(String(x.filial || "").trim()) && !/ELETRO/i.test(x.tipo || "");
+  let sincT = null;
+  function sincFiliais() {   // veículo em 2+ lojas numeradas: a filial na Operação (e no app) mostra "A/B"; desmarcou, volta ao original
+    if (!admin() || !carregou || !filaOk) return;
+    clearTimeout(sincT);
+    sincT = setTimeout(() => {
+      const m = {}; Object.values(filaMap).filter(v => v.status === "Em Doca").forEach(v => m[norm(v.placa)] = { v, lojas: [] });
+      ativos.filter(elegivel).forEach(x => veicAtivos(x).forEach(p => { const e = m[norm(p)], f = x.filial.trim(); if (e && !e.lojas.includes(f)) e.lojas.push(f); }));
+      const b = db.batch(), D = F.delete(); let n = 0;
+      Object.values(m).forEach(({ v, lojas }) => {
+        const auto = v.filialAuto && v.filial === v.filialAuto, ref = db.collection("fila_patio").doc(v.id);
+        if (lojas.length >= 2) { const alvo = lojas.join("/"); if (v.filial !== alvo) { b.update(ref, { filial: alvo, filialBase: auto ? (v.filialBase || "") : (v.filial || ""), filialAuto: alvo }); n++; } }
+        else if (auto) { b.update(ref, { filial: v.filialBase || "-", filialBase: D, filialAuto: D }); n++; }
+        else if (v.filialAuto || v.filialBase) { b.update(ref, { filialBase: D, filialAuto: D }); n++; }
+      });
+      if (n) b.commit().catch(() => {});
+    }, 700);
+  }
   function veicAtivos(x) {
     const vs = (x.veiculo || "").split(",").map(s => s.trim()).filter(Boolean);
-    const der = Object.values(filaMap).filter(v => v.status === "Em Doca" && x.filial && chave(v.filial) === chave(x.filial) && !(x.removidos || []).includes(v.placa)).map(v => v.placa);
+    const der = Object.values(filaMap).filter(v => v.status === "Em Doca" && x.filial && partes(v).includes(chave(x.filial)) && !(x.removidos || []).includes(v.placa)).map(v => v.placa);
     return [...new Set([...vs, ...der])];
   }
   const emDoca = x => veicAtivos(x).filter(p => (filaMap[norm(p)] || {}).status === "Em Doca");
@@ -1790,7 +1811,7 @@ html.mobile #dc-corpo tr.rw-ok{border-color:#12b886!important;box-shadow:inset 4
     if (window.cd84RetornoRapido(f.filial)) {
       const { id, ...d } = f;
       b.set(db.collection("fila_patio").doc(), { ...d, status: "Concluido", timestampSaida: agora, viagemRapida: true });
-      b.update(ref, { status: "Aguardando", filial: "-", doca: "-", conferente: "-", timestampChamada: firebase.firestore.FieldValue.delete(), timestampSaida: firebase.firestore.FieldValue.delete() });
+      b.update(ref, { status: "Aguardando", filial: "-", doca: "-", conferente: "-", timestampChamada: firebase.firestore.FieldValue.delete(), timestampSaida: firebase.firestore.FieldValue.delete(), filialBase: firebase.firestore.FieldValue.delete(), filialAuto: firebase.firestore.FieldValue.delete() });
     } else b.update(ref, { status: "Em Viagem", timestampSaida: agora });
   };
 
