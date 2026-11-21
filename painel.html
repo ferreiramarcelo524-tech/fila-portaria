@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<script>try{var v=localStorage.getItem('cd84_versao')||sessionStorage.getItem('cd84_versao');if(v==='mobile')document.documentElement.classList.add('mobile')}catch(e){}</script>
+<script>try{var v=localStorage.getItem('cd84_versao')||sessionStorage.getItem('cd84_versao');if(v==='mobile')document.documentElement.classList.add('mobile');var t=localStorage.getItem('cd84_tema');if(t)document.documentElement.setAttribute('data-tema',t)}catch(e){}</script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <link rel="manifest" href="manifest-painel.json">
@@ -259,6 +259,31 @@ tbody tr.rw-r:hover td{background:#ffeef0}tbody tr.rw-y:hover td{background:#fff
 .cal-add{width:100%;border:1px dashed #b8c8ee;background:transparent;color:#1f5bff;border-radius:12px;padding:8px;font-family:inherit;font-weight:700;cursor:pointer;transition:all .2s}.cal-add:hover{background:#eef3ff;border-style:solid}
 html.mobile #vp-pop{left:8px!important;right:8px;top:auto!important;bottom:8px;width:auto!important;background:var(--m-bg);color:var(--m-text)}html.mobile .vp-it{background:var(--m-card);color:var(--m-text)}
 html.mobile #dc-corpo tr.rw-r{border-color:#e5324b!important;box-shadow:inset 5px 0 0 #e5324b!important}html.mobile #dc-corpo tr.rw-y{border-color:#f5b301!important;box-shadow:inset 5px 0 0 #f5b301!important}html.mobile #dc-corpo tr.rw-g{border-color:#12b886!important;box-shadow:inset 5px 0 0 #12b886!important}html.mobile .cal-day{background:var(--m-card);border-color:var(--m-bd)}html.mobile .cal-r{grid-template-columns:104px 1fr 84px}html.mobile .cal-add{border-color:var(--m-bd)}
+html[data-tema="dark"]{color-scheme:dark;--m-bg:rgba(14,22,40,.98);--m-card:#16213a;--m-card2:#1b2744;--m-text:#e6edf7;--m-mut:#8fa1c2;--m-bd:#27365a;--m-in:#101a30;--m-name:#9cc3ff;--ink:#e6edf7;--border:#27365a;--text-main:#e6edf7}
+html[data-tema="light"]{color-scheme:light;--m-bg:#fff;--m-card:#f8fbff;--m-card2:#edf2f9;--m-text:#172b4d;--m-mut:#64748b;--m-bd:#d5e1f2;--m-in:#fbfdff;--m-name:#073b95}
+html.tema-trans *,html.tema-trans *:before,html.tema-trans *:after{transition:background-color .35s,color .35s,border-color .35s,box-shadow .35s!important}
+html[data-tema="dark"] body{background:radial-gradient(900px 500px at 8% -5%,rgba(31,91,255,.22),transparent 60%),radial-gradient(700px 480px at 95% 0%,rgba(255,59,78,.10),transparent 60%),#0a1022!important;color:var(--m-text)}
+html[data-tema="dark"]:not(.mobile) .tabs{background:rgba(20,30,56,.85)}html[data-tema="dark"]:not(.mobile) .tab-btn{color:#a9b8d4}html[data-tema="dark"]:not(.mobile) .tab-btn:hover{color:#9cc3ff}html[data-tema="dark"] .tab-btn.active{color:#fff!important}
+html[data-tema="dark"] .card{background:rgba(20,30,56,.82)!important;border-color:rgba(255,255,255,.07)!important;box-shadow:0 12px 34px rgba(0,0,0,.35)!important}
+html[data-tema="dark"] .card h2,html[data-tema="dark"] h3{color:var(--m-text)!important}
+html[data-tema="dark"] thead th{color:#8fa1c2!important}html[data-tema="dark"] tbody td{background:var(--m-card);color:var(--m-text)}
+html[data-tema="dark"] tbody tr:hover td{background:#1d2b4a}html[data-tema="dark"] td small{color:var(--m-mut)!important}
+html[data-tema="dark"] tbody tr.rw-r td{background:#2a1820}html[data-tema="dark"] tbody tr.rw-y td{background:#2a2414}html[data-tema="dark"] tbody tr.rw-g td{background:#14291f}
+html[data-tema="dark"] .stats-grid .stat-card{background:linear-gradient(135deg,#16213a,#1b2744)!important;box-shadow:0 10px 26px rgba(0,0,0,.35)!important}
+html[data-tema="dark"] .stat-numero{background:linear-gradient(90deg,#9cc3ff,#5fd0ff);-webkit-background-clip:text;background-clip:text;color:transparent!important}html[data-tema="dark"] .stat-label{color:var(--m-mut)!important}
+html[data-tema="dark"] input:not([type=checkbox]):not([type=color]),html[data-tema="dark"] select:not([data-f=tipo]):not([data-ct]),html[data-tema="dark"] textarea{background:var(--m-in)!important;color:var(--m-text)!important;border-color:var(--m-bd)!important}
+html[data-tema="dark"] .periodo-btn{background:var(--m-card2)!important;color:var(--m-text)!important;border-color:var(--m-bd)!important}html[data-tema="dark"] .periodo-btn.active{background:linear-gradient(135deg,#1746d1,#2b86ff)!important;color:#fff!important}
+html[data-tema="dark"] .chip,html[data-tema="dark"] .px-chip,html[data-tema="dark"] #tab-docas .chip{background:var(--m-card2)!important;color:var(--m-text)!important;border-color:var(--m-bd)!important}
+html[data-tema="dark"] .vadd,html[data-tema="dark"] .cal-add{background:var(--m-card2);border-color:#3b5bb0;color:#9cc3ff}html[data-tema="dark"] .vp-it,html[data-tema="dark"] .vi-item,html[data-tema="dark"] .vi-x{background:var(--m-card2);color:var(--m-text)}
+html[data-tema="dark"] #vi-pop,html[data-tema="dark"] #vp-pop,html[data-tema="dark"] .ed-card,html[data-tema="dark"] .vs-card{background:var(--m-bg);color:var(--m-text);border-color:var(--m-bd)}
+html[data-tema="dark"] .vi-placa,html[data-tema="dark"] .ed-h,html[data-tema="dark"] .vs-card h2,html[data-tema="dark"] .vs-opts b{color:var(--m-text)}html[data-tema="dark"] .vs-opts button{background:var(--m-card2);border-color:var(--m-bd)}
+html[data-tema="dark"] .cal-day{background:linear-gradient(180deg,#16213a,#131c33);border-color:var(--m-bd)}
+html[data-tema="dark"] .empty-msg{background:transparent;border-color:var(--m-bd);color:var(--m-mut)}
+html[data-tema="dark"] #tab-pedidos .cv-tbl{background:var(--m-card);border-color:var(--m-bd)}html[data-tema="dark"] #tab-pedidos .cv-tbl td{background:var(--m-card)}html[data-tema="dark"] #tab-pedidos .cv-tbl th{background:var(--m-card2)!important;color:var(--m-text)!important}
+html[data-tema="dark"] #tab-pedidos .cv-drop{background:var(--m-in);border-color:var(--m-bd)}html[data-tema="dark"] #tab-pedidos .cv-edit{background:transparent}
+html[data-tema="dark"] .fr-sel,html[data-tema="dark"] .fr-dt{background:var(--m-in)!important;color:var(--m-text)}html[data-tema="dark"] .fr-bar-bg{background:#22304f}html[data-tema="dark"] .fr-chip{background:#23365f;color:#9cc3ff}
+html[data-tema="dark"] .fr-lista label:hover,html[data-tema="dark"] .fr-rk:hover{background:#1d2b4a}html[data-tema="dark"] .fr-det-row>td{background:#131c33}
+html[data-tema="dark"] label,html[data-tema="dark"] .ed-l{color:#a9b8d4}
 </style>
 </head>
 <body>
@@ -2739,6 +2764,28 @@ html.mobile #dc-corpo tr.rw-r{border-color:#e5324b!important;box-shadow:inset 5p
     document.getElementById("fm-ok").onclick = ok; back.onclick = e => { if (e.target === back || e.target.closest("[data-fx]")) fim(null); };
     setTimeout(() => { const i = back.querySelector("input"); if (i) i.focus(); }, 60);
   });
+})();
+
+</script>
+<script>
+/* Tema claro/escuro (escolha salva neste aparelho) */
+(function () {
+  const root = document.documentElement, K = "cd84_tema", mq = matchMedia("(prefers-color-scheme: dark)");
+  const atual = () => root.getAttribute("data-tema") || (root.classList.contains("mobile") && mq.matches ? "dark" : "light");
+  const ua = document.querySelector(".user-area"), bt = document.createElement("button");
+  bt.type = "button"; bt.className = "btn-login"; bt.id = "btn-tema"; bt.title = "Trocar tema"; if (ua) ua.insertBefore(bt, ua.firstChild);
+  const mbBar = document.getElementById("mb-app"); let mb = null;
+  if (mbBar) { mb = document.createElement("button"); mb.type = "button"; mb.className = "mb-b sec"; mb.id = "mb-tema"; mb.title = "Trocar tema"; mbBar.insertBefore(mb, document.getElementById("mb-ver")); }
+  const rot = () => {
+    const d = atual() === "dark"; bt.textContent = d ? "☀️ Claro" : "🌙 Escuro"; if (mb) mb.textContent = d ? "☀️" : "🌙";
+    const m = document.querySelector('meta[name="theme-color"]'); if (m) m.content = d ? "#0a1022" : "#063b91";
+  };
+  const alterna = () => {
+    const n = atual() === "dark" ? "light" : "dark"; root.classList.add("tema-trans"); root.setAttribute("data-tema", n);
+    try { localStorage.setItem(K, n); } catch (e) {} rot(); setTimeout(() => root.classList.remove("tema-trans"), 450);
+  };
+  bt.onclick = alterna; if (mb) mb.onclick = alterna; rot();
+  root.addEventListener("cd84-modo", rot); if (mq.addEventListener) mq.addEventListener("change", rot);
 })();
 
 </script>
