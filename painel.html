@@ -284,31 +284,36 @@ html[data-tema="dark"] #tab-pedidos .cv-drop{background:var(--m-in);border-color
 html[data-tema="dark"] .fr-sel,html[data-tema="dark"] .fr-dt{background:var(--m-in)!important;color:var(--m-text)}html[data-tema="dark"] .fr-bar-bg{background:#22304f}html[data-tema="dark"] .fr-chip{background:#23365f;color:#9cc3ff}
 html[data-tema="dark"] .fr-lista label:hover,html[data-tema="dark"] .fr-rk:hover{background:#1d2b4a}html[data-tema="dark"] .fr-det-row>td{background:#131c33}
 html[data-tema="dark"] label,html[data-tema="dark"] .ed-l{color:#a9b8d4}
-/* ===== Efeitos glass: ajuste a velocidade/curva nestas variáveis ===== */
-:root{--fx-dur:.5s;--fx-ease:cubic-bezier(.2,.8,.2,1);--fx-step:45ms;--fx-shine:.9s;--fx-shine-c:rgba(255,255,255,.42)}
-html[data-tema="dark"]{--fx-shine-c:rgba(160,190,255,.14)}
-@media(prefers-color-scheme:dark){html.mobile:not([data-tema="light"]){--fx-shine-c:rgba(160,190,255,.14)}}
-/* vidro em camadas (desktop): brilho interno + sombras suaves; no mobile os cartões continuam planos */
-html:not(.mobile) .card{border:1px solid rgba(255,255,255,.75)!important;backdrop-filter:blur(18px) saturate(150%)!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.7),0 12px 34px rgba(20,40,100,.08),0 2px 6px rgba(20,40,100,.05)!important}
-html[data-tema="dark"]:not(.mobile) .card{border-color:rgba(255,255,255,.08)!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 14px 36px rgba(0,0,0,.42),0 2px 6px rgba(0,0,0,.3)!important}
-html .stat-card,html .cal-day{backdrop-filter:blur(14px) saturate(140%)}
-/* troca de aba: o painel só faz um fade; o movimento fica por conta da cascata e do brilho */
+/* ===== Efeitos glass (baseados no vídeo): ajuste velocidade/curva/desfoque nestas variáveis ===== */
+:root{--fx-dur:.38s;--fx-ease:cubic-bezier(.2,.8,.2,1);--fx-step:45ms;--fx-child:.16s;--fx-veil:.8s;--fx-blur:6px;--fx-veil-bg:rgba(255,255,255,.16)}
+html.mobile{--fx-blur:4px}
+html[data-tema="dark"]{--fx-veil-bg:rgba(10,16,34,.28)}
+@media(prefers-color-scheme:dark){html.mobile:not([data-tema="light"]){--fx-veil-bg:rgba(10,16,34,.28)}}
+/* vidro: mais translúcido, brilho diagonal, borda de luz e sombras em camadas (desktop; no mobile os cartões seguem planos) */
+html:not(.mobile) .card{background:linear-gradient(135deg,rgba(255,255,255,.34),rgba(255,255,255,0) 55%),rgba(255,255,255,.64)!important;border:1px solid rgba(255,255,255,.75)!important;backdrop-filter:blur(22px) saturate(160%)!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.7),0 12px 34px rgba(20,40,100,.08),0 2px 6px rgba(20,40,100,.05)!important}
+html[data-tema="dark"]:not(.mobile) .card{background:linear-gradient(135deg,rgba(255,255,255,.07),rgba(255,255,255,0) 55%),rgba(20,30,56,.72)!important;border-color:rgba(255,255,255,.09)!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 14px 36px rgba(0,0,0,.42),0 2px 6px rgba(0,0,0,.3)!important}
+html .stat-card,html .cal-day{backdrop-filter:blur(16px) saturate(150%)}
+html .tab-pill{backdrop-filter:blur(8px);box-shadow:inset 0 1px 0 rgba(255,255,255,.45),0 8px 18px rgba(31,91,255,.38)}
+/* troca de tela: o painel só faz um fade; o resto é o véu de vidro + cartões + conteúdo em foco */
 html .tab-conteudo.ativo,html .dc-pane.on,html .cv-pane.on{animation:fxPane .28s ease both!important}
 @keyframes fxPane{from{opacity:0}to{opacity:1}}
-/* entrada escalonada (delay = índice × --fx-step) */
-.fx-in{animation:fxIn var(--fx-dur) var(--fx-ease) both;animation-delay:calc(var(--i,0)*var(--fx-step))}
-@keyframes fxIn{from{opacity:0;transform:translateY(16px) scale(.985)}to{opacity:1;transform:none}}
-/* brilho de vidro que varre o painel ao trocar de aba */
-.fx-shine{position:relative}
-.fx-shine:after{content:"";position:absolute;inset:0;z-index:5;border-radius:22px;pointer-events:none;background:linear-gradient(105deg,transparent 38%,var(--fx-shine-c) 50%,transparent 62%);background-size:250% 100%;animation:fxShine var(--fx-shine) ease-out both}
-@keyframes fxShine{0%{background-position:130% 0;opacity:1}70%{opacity:1}100%{background-position:-130% 0;opacity:0}}
+/* 1) véu fosco: a tela nova nasce desfocada e vai entrando em foco */
+.fx-veil{position:relative}
+.fx-veil:after{content:"";position:absolute;inset:0;z-index:5;border-radius:22px;pointer-events:none;background:var(--fx-veil-bg);-webkit-backdrop-filter:blur(22px);backdrop-filter:blur(22px);animation:fxVeil var(--fx-veil) ease-out both}
+@keyframes fxVeil{0%{opacity:1;-webkit-backdrop-filter:blur(22px);backdrop-filter:blur(22px)}60%{opacity:.9;-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}100%{opacity:0;-webkit-backdrop-filter:blur(0);backdrop-filter:blur(0)}}
+/* 2) estrutura primeiro: o "casco" de vidro de cada cartão entra em cascata */
+.fx-shell{animation:fxShell var(--fx-dur) var(--fx-ease) both;animation-delay:calc(var(--i,0)*var(--fx-step))}
+@keyframes fxShell{from{opacity:0;transform:translateY(18px) scale(.985)}to{opacity:1;transform:none}}
+/* 3) conteúdo depois: desfoque -> nítido, também escalonado (linhas de tabela usam o mesmo efeito) */
+.fx-focus{animation:fxFocus .55s var(--fx-ease) both;animation-delay:calc(var(--i,0)*var(--fx-step) + var(--fx-child))}
+@keyframes fxFocus{from{opacity:0;filter:blur(var(--fx-blur));transform:translateY(10px)}to{opacity:1;filter:blur(0);transform:none}}
 /* micro-interações */
 .btn-action,.periodo-btn,.tab-btn,.chip,.px-chip,.vadd,.cal-add,.vp-it,.mb-b,.ax-btn,.mb-ch button{transition:transform .18s var(--fx-ease),box-shadow .2s,filter .2s,background-color .25s,color .25s,border-color .25s}
 .chip:hover,.px-chip:hover,.vp-it:hover,.periodo-btn:hover{transform:translateY(-1px)}
 .btn-action:active,.periodo-btn:active,.tab-btn:active,.chip:active,.px-chip:active,.vadd:active,.cal-add:active,.vp-it:active,.mb-b:active,.mb-ch button:active{transform:scale(.95)}
 .stat-card,.cal-day,.fila-item{transition:transform .25s var(--fx-ease),box-shadow .25s}.stat-card:active,.cal-day:active{transform:scale(.99)}
 tbody tr{transition:transform .2s var(--fx-ease),filter .2s,background-color .2s}
-@media (prefers-reduced-motion:reduce){.fx-in,.fx-shine:after{animation:none!important}html .tab-conteudo.ativo,html .dc-pane.on,html .cv-pane.on{animation:none!important}}
+@media (prefers-reduced-motion:reduce){.fx-shell,.fx-focus,.fx-veil:after{animation:none!important}html .tab-conteudo.ativo,html .dc-pane.on,html .cv-pane.on{animation:none!important}}
 </style>
 </head>
 <body>
@@ -2815,71 +2820,83 @@ tbody tr{transition:transform .2s var(--fx-ease),filter .2s,background-color .2s
 
 </script>
 <script>
-/* Efeitos: cascata + brilho ao trocar de aba, entrada de linhas e contagem animada. Só adiciona classes/estilos; não toca em dados, formulários ou listeners existentes. */
+/* Efeitos (vídeo "Glassy Dashboard"): véu fosco -> cartões de vidro -> conteúdo em foco + contagem a partir do zero.
+   Só adiciona classes/estilos; não toca em dados, formulários ou listeners existentes. */
 (function () {
   "use strict";
-  const CFG = { maxItens: 18, maxIndice: 12, contagemMs: 650 };               // limite de itens animados, índice máx. do atraso, duração da contagem
+  const CFG = { maxItens: 30, maxIndice: 14, contagemMs: 900 };                  // itens animados, índice máx. do atraso, duração da contagem
   const reduz = matchMedia("(prefers-reduced-motion: reduce)");
-  const PANES = ".tab-conteudo,.dc-pane,.cv-pane,.fr-sub,#fr-proximas";        // painéis que aparecem/desaparecem
-  const ALVOS = ".card,.stat-card,.cal-day,.fila-item,tbody>tr";               // o que entra em cascata
-  const NUM = ".stat-numero,#dc-dia,#mb-a,#mb-d,#mb-v";                        // números com contagem animada (#dc-mes já tem a sua)
+  const PANES = ".tab-conteudo,.dc-pane,.cv-pane,.fr-sub,#fr-proximas";           // painéis que aparecem/desaparecem
+  const ALVOS = ".card,.stat-card,.cal-day,.fila-item,tbody>tr";                  // o que entra em cascata
+  const CASCOS = ".card,.stat-card,.cal-day,.fila-item";                          // dentro destes: casco primeiro, conteúdo depois
+  const FILHOS_PROPRIOS = ".stat-card,.cal-day,tbody>tr";                         // filhos que já animam sozinhos
+  const NUM = ".stat-numero,#dc-dia,#mb-a,#mb-d,#mb-v";                           // números com contagem (#dc-mes já tem a sua)
 
   const visivel = (cls, el) => el.matches(".tab-conteudo") ? /(^|\s)ativo(\s|$)/.test(cls)
     : el.matches(".dc-pane,.cv-pane") ? /(^|\s)on(\s|$)/.test(cls) : !/(^|\s)hidden(\s|$)/.test(cls);
+  const anim = (e, cls) => { e.classList.remove(cls); void e.offsetWidth; e.classList.add(cls); };
 
-  // ---- cascata: translateY + opacity com atraso por índice (nunca em quem está em edição) ----
+  // ---- cascata em duas fases (nunca em quem contém o campo em foco) ----
   function cascata(els) {
     let i = 0;
     els.filter(e => e.offsetParent !== null && !e.contains(document.activeElement)).slice(0, CFG.maxItens).forEach(e => {
-      e.style.setProperty("--i", Math.min(i++, CFG.maxIndice));
-      e.classList.remove("fx-in"); void e.offsetWidth; e.classList.add("fx-in");
+      const idx = Math.min(i++, CFG.maxIndice); e.style.setProperty("--i", idx);
+      if (e.matches(CASCOS)) {
+        anim(e, "fx-shell");
+        [...e.children].filter(c => !c.querySelector(FILHOS_PROPRIOS)).slice(0, 8).forEach(c => { c.style.setProperty("--i", idx); anim(c, "fx-focus"); });
+      } else anim(e, "fx-focus");                                                  // linhas de tabela
     });
   }
-  // ---- troca de aba/sub-aba: brilho de vidro + cascata ----
   function revelar(pane) {
     if (reduz.matches) return;
-    pane.classList.remove("fx-shine"); void pane.offsetWidth; pane.classList.add("fx-shine");
+    anim(pane, "fx-veil");
     cascata([...pane.querySelectorAll(ALVOS)]);
+    pane.querySelectorAll(NUM).forEach(contagemEntrada);
   }
-  // ---- primeira carga de uma tabela vazia: linhas entram em cascata (atualizações seguintes não animam) ----
-  function tabela(tb) {
+  function tabela(tb) {                                                            // 1ª carga de tabela vazia (as atualizações seguintes não animam)
     const n = tb.rows.length, antes = tb.__fxN || 0; tb.__fxN = n;
     if (!antes && n && !reduz.matches && tb.offsetParent !== null) cascata([...tb.rows]);
   }
-  // limpeza ao fim das animações (devolve o elemento ao estado normal)
-  document.addEventListener("animationend", e => {
-    const t = e.target;
-    if (e.animationName === "fxIn") { t.classList.remove("fx-in"); t.style.removeProperty("--i"); }
-    else if (e.animationName === "fxShine") t.classList.remove("fx-shine");
+  document.addEventListener("animationend", e => {                                 // devolve o elemento ao estado normal
+    const t = e.target, n = e.animationName;
+    if (n === "fxShell" || n === "fxFocus") { t.classList.remove(n === "fxShell" ? "fx-shell" : "fx-focus"); t.style.removeProperty("--i"); }
+    else if (n === "fxVeil") t.classList.remove("fx-veil");
   }, true);
 
-  // ---- contagem animada: do valor mostrado até o novo, mantendo prefixo/sufixo/casas decimais ----
+  // ---- contagem animada: mantém prefixo/sufixo/casas decimais ----
   function ler(txt) {
     const m = /^(\D*?)(-?\d[\d.]*(?:,\d+)?)(\D*)$/.exec(txt.trim()); if (!m) return null;
-    const num = m[2], ponto = !num.includes(",") && /^-?\d+\.\d{1,2}$/.test(num);   // "12.5" = decimal com ponto; "1.234" = milhar
+    const num = m[2], ponto = !num.includes(",") && /^-?\d+\.\d{1,2}$/.test(num);   // "12.5" = decimal; "1.234" = milhar
     const d = ponto ? num.split(".")[1].length : (num.split(",")[1] || "").length;
     return { p: m[1], s: m[3], d, ponto, v: ponto ? parseFloat(num) : parseFloat(num.replace(/\./g, "").replace(",", ".")) };
   }
-  function contar(node) {
-    const el = node.nodeType === 1 ? node : node.parentElement; if (!el || !el.closest) return;
-    const alvo = el.closest(NUM); if (!alvo) return;
-    const st = alvo.__fx || (alvo.__fx = { w: null, cur: null, raf: 0 }), txt = alvo.textContent;
-    if (txt === st.w) return;                                   // foi a nossa própria escrita
-    const novo = ler(txt); if (!novo || reduz.matches) { st.cur = novo ? novo.v : null; return; }
-    const de = st.cur != null ? st.cur : 0; if (de === novo.v) return;
-    cancelAnimationFrame(st.raf);
-    const t0 = performance.now(), fim = txt;
+  const estado = el => el.__fx || (el.__fx = { w: null, cur: null, raf: 0, final: null });
+  function animar(alvo, de, novo, fim) {
+    const st = estado(alvo), t0 = performance.now(); cancelAnimationFrame(st.raf); st.final = fim;
     const passo = t => {
       const p = Math.min(1, (t - t0) / CFG.contagemMs), v = de + (novo.v - de) * (1 - Math.pow(1 - p, 3));
       st.cur = v;
       st.w = p < 1 ? novo.p + (novo.ponto ? v.toFixed(novo.d) : v.toLocaleString("pt-BR", { minimumFractionDigits: novo.d, maximumFractionDigits: novo.d })) + novo.s : fim;
       alvo.textContent = st.w;
-      if (p < 1) st.raf = requestAnimationFrame(passo); else st.cur = novo.v;
+      if (p < 1) st.raf = requestAnimationFrame(passo); else { st.raf = 0; st.cur = novo.v; }
     };
     st.raf = requestAnimationFrame(passo);
   }
+  function contagemEntrada(el) {                                                   // ao abrir uma tela: do zero até o valor
+    if (el.offsetParent === null || reduz.matches) return;
+    const st = estado(el), fim = st.raf && st.final ? st.final : el.textContent, n = ler(fim);
+    if (n) animar(el, 0, n, fim);
+  }
+  function contar(node) {                                                          // quando o valor muda: do mostrado até o novo
+    const el = node.nodeType === 1 ? node : node.parentElement; if (!el || !el.closest) return;
+    const alvo = el.closest(NUM); if (!alvo) return;
+    const st = estado(alvo), txt = alvo.textContent;
+    if (txt === st.w) return;                                                      // foi a nossa própria escrita
+    const novo = ler(txt); if (!novo || reduz.matches) { st.cur = novo ? novo.v : null; return; }
+    const de = st.cur != null ? st.cur : 0; if (de !== novo.v) animar(alvo, de, novo, txt);
+  }
 
-  // ---- um único observador, filtrado: só reage a painéis que ficaram visíveis, tbody e números ----
+  // ---- um único observador, filtrado: só painéis que ficaram visíveis, tbody e números ----
   new MutationObserver(ms => {
     for (const m of ms) {
       if (m.type === "attributes") {
@@ -2892,7 +2909,6 @@ tbody tr{transition:transform .2s var(--fx-ease),filter .2s,background-color .2s
 
   setTimeout(() => { const a = document.querySelector(".tab-conteudo.ativo"); if (a) revelar(a); }, 250);   // aba inicial
 })();
-
 </script>
 </body>
 </html>
