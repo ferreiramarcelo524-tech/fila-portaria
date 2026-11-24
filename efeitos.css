@@ -1,0 +1,25 @@
+/* ===== Efeitos glass: ajuste a velocidade/curva nestas variáveis ===== */
+:root{--fx-dur:.5s;--fx-ease:cubic-bezier(.2,.8,.2,1);--fx-step:45ms;--fx-shine:.9s;--fx-shine-c:rgba(255,255,255,.42)}
+html[data-tema="dark"]{--fx-shine-c:rgba(160,190,255,.14)}
+@media(prefers-color-scheme:dark){html.mobile:not([data-tema="light"]){--fx-shine-c:rgba(160,190,255,.14)}}
+/* vidro em camadas (desktop): brilho interno + sombras suaves; no mobile os cartões continuam planos */
+html:not(.mobile) .card{border:1px solid rgba(255,255,255,.75)!important;backdrop-filter:blur(18px) saturate(150%)!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.7),0 12px 34px rgba(20,40,100,.08),0 2px 6px rgba(20,40,100,.05)!important}
+html[data-tema="dark"]:not(.mobile) .card{border-color:rgba(255,255,255,.08)!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 14px 36px rgba(0,0,0,.42),0 2px 6px rgba(0,0,0,.3)!important}
+html .stat-card,html .cal-day{backdrop-filter:blur(14px) saturate(140%)}
+/* troca de aba: o painel só faz um fade; o movimento fica por conta da cascata e do brilho */
+html .tab-conteudo.ativo,html .dc-pane.on,html .cv-pane.on{animation:fxPane .28s ease both!important}
+@keyframes fxPane{from{opacity:0}to{opacity:1}}
+/* entrada escalonada (delay = índice × --fx-step) */
+.fx-in{animation:fxIn var(--fx-dur) var(--fx-ease) both;animation-delay:calc(var(--i,0)*var(--fx-step))}
+@keyframes fxIn{from{opacity:0;transform:translateY(16px) scale(.985)}to{opacity:1;transform:none}}
+/* brilho de vidro que varre o painel ao trocar de aba */
+.fx-shine{position:relative}
+.fx-shine:after{content:"";position:absolute;inset:0;z-index:5;border-radius:22px;pointer-events:none;background:linear-gradient(105deg,transparent 38%,var(--fx-shine-c) 50%,transparent 62%);background-size:250% 100%;animation:fxShine var(--fx-shine) ease-out both}
+@keyframes fxShine{0%{background-position:130% 0;opacity:1}70%{opacity:1}100%{background-position:-130% 0;opacity:0}}
+/* micro-interações */
+.btn-action,.periodo-btn,.tab-btn,.chip,.px-chip,.vadd,.cal-add,.vp-it,.mb-b,.ax-btn,.mb-ch button{transition:transform .18s var(--fx-ease),box-shadow .2s,filter .2s,background-color .25s,color .25s,border-color .25s}
+.chip:hover,.px-chip:hover,.vp-it:hover,.periodo-btn:hover{transform:translateY(-1px)}
+.btn-action:active,.periodo-btn:active,.tab-btn:active,.chip:active,.px-chip:active,.vadd:active,.cal-add:active,.vp-it:active,.mb-b:active,.mb-ch button:active{transform:scale(.95)}
+.stat-card,.cal-day,.fila-item{transition:transform .25s var(--fx-ease),box-shadow .25s}.stat-card:active,.cal-day:active{transform:scale(.99)}
+tbody tr{transition:transform .2s var(--fx-ease),filter .2s,background-color .2s}
+@media (prefers-reduced-motion:reduce){.fx-in,.fx-shine:after{animation:none!important}html .tab-conteudo.ativo,html .dc-pane.on,html .cv-pane.on{animation:none!important}}
