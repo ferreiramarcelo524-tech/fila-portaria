@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<script>try{var v=localStorage.getItem('cd84_versao')||sessionStorage.getItem('cd84_versao');if(v==='mobile')document.documentElement.classList.add('mobile');var t=localStorage.getItem('cd84_tema');if(t)document.documentElement.setAttribute('data-tema',t)}catch(e){}</script>
+<script>try{var v=localStorage.getItem('cd84_versao')||sessionStorage.getItem('cd84_versao');if(v==='mobile')document.documentElement.classList.add('mobile');var t=localStorage.getItem('cd84_tema');if(t)document.documentElement.setAttribute('data-tema',t);var an=localStorage.getItem('cd84_anim');if(an)document.documentElement.setAttribute('data-anim',an)}catch(e){}</script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <link rel="manifest" href="manifest-painel.json">
@@ -284,36 +284,31 @@ html[data-tema="dark"] #tab-pedidos .cv-drop{background:var(--m-in);border-color
 html[data-tema="dark"] .fr-sel,html[data-tema="dark"] .fr-dt{background:var(--m-in)!important;color:var(--m-text)}html[data-tema="dark"] .fr-bar-bg{background:#22304f}html[data-tema="dark"] .fr-chip{background:#23365f;color:#9cc3ff}
 html[data-tema="dark"] .fr-lista label:hover,html[data-tema="dark"] .fr-rk:hover{background:#1d2b4a}html[data-tema="dark"] .fr-det-row>td{background:#131c33}
 html[data-tema="dark"] label,html[data-tema="dark"] .ed-l{color:#a9b8d4}
-/* ===== Efeitos glass (baseados no vídeo): ajuste velocidade/curva/desfoque nestas variáveis ===== */
-:root{--fx-dur:.38s;--fx-ease:cubic-bezier(.2,.8,.2,1);--fx-step:45ms;--fx-child:.16s;--fx-veil:.8s;--fx-blur:6px;--fx-veil-bg:rgba(255,255,255,.16)}
-html.mobile{--fx-blur:4px}
-html[data-tema="dark"]{--fx-veil-bg:rgba(10,16,34,.28)}
-@media(prefers-color-scheme:dark){html.mobile:not([data-tema="light"]){--fx-veil-bg:rgba(10,16,34,.28)}}
-/* vidro: mais translúcido, brilho diagonal, borda de luz e sombras em camadas (desktop; no mobile os cartões seguem planos) */
+/* ===== Efeitos: blocos que se encaixam (coluna a coluna). Ajuste velocidade/curva nestas variáveis ===== */
+:root{--fx-dock-dur:.62s;--fx-ease-dock:cubic-bezier(.22,.9,.3,1);--fx-snap-at:.43s}
+html[data-anim="reduced"]{--fx-dock-dur:.35s;--fx-snap-at:.25s}
+/* vidro: translúcido, brilho diagonal, borda de luz e sombras em camadas (desktop; no mobile os cartões seguem planos) */
 html:not(.mobile) .card{background:linear-gradient(135deg,rgba(255,255,255,.34),rgba(255,255,255,0) 55%),rgba(255,255,255,.64)!important;border:1px solid rgba(255,255,255,.75)!important;backdrop-filter:blur(22px) saturate(160%)!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.7),0 12px 34px rgba(20,40,100,.08),0 2px 6px rgba(20,40,100,.05)!important}
 html[data-tema="dark"]:not(.mobile) .card{background:linear-gradient(135deg,rgba(255,255,255,.07),rgba(255,255,255,0) 55%),rgba(20,30,56,.72)!important;border-color:rgba(255,255,255,.09)!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 14px 36px rgba(0,0,0,.42),0 2px 6px rgba(0,0,0,.3)!important}
 html .stat-card,html .cal-day{backdrop-filter:blur(16px) saturate(150%)}
 html .tab-pill{backdrop-filter:blur(8px);box-shadow:inset 0 1px 0 rgba(255,255,255,.45),0 8px 18px rgba(31,91,255,.38)}
-/* troca de tela: o painel só faz um fade; o resto é o véu de vidro + cartões + conteúdo em foco */
-html .tab-conteudo.ativo,html .dc-pane.on,html .cv-pane.on{animation:fxPane .28s ease both!important}
-@keyframes fxPane{from{opacity:0}to{opacity:1}}
-/* 1) véu fosco: a tela nova nasce desfocada e vai entrando em foco */
-.fx-veil{position:relative}
-.fx-veil:after{content:"";position:absolute;inset:0;z-index:5;border-radius:22px;pointer-events:none;background:var(--fx-veil-bg);-webkit-backdrop-filter:blur(22px);backdrop-filter:blur(22px);animation:fxVeil var(--fx-veil) ease-out both}
-@keyframes fxVeil{0%{opacity:1;-webkit-backdrop-filter:blur(22px);backdrop-filter:blur(22px)}60%{opacity:.9;-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}100%{opacity:0;-webkit-backdrop-filter:blur(0);backdrop-filter:blur(0)}}
-/* 2) estrutura primeiro: o "casco" de vidro de cada cartão entra em cascata */
-.fx-shell{animation:fxShell var(--fx-dur) var(--fx-ease) both;animation-delay:calc(var(--i,0)*var(--fx-step))}
-@keyframes fxShell{from{opacity:0;transform:translateY(18px) scale(.985)}to{opacity:1;transform:none}}
-/* 3) conteúdo depois: desfoque -> nítido, também escalonado (linhas de tabela usam o mesmo efeito) */
-.fx-focus{animation:fxFocus .55s var(--fx-ease) both;animation-delay:calc(var(--i,0)*var(--fx-step) + var(--fx-child))}
-@keyframes fxFocus{from{opacity:0;filter:blur(var(--fx-blur));transform:translateY(10px)}to{opacity:1;filter:blur(0);transform:none}}
+/* o painel não se mexe: quem se move são os blocos */
+html .tab-conteudo.ativo,html .dc-pane.on,html .cv-pane.on{animation:none!important}
+/* encaixe: usa as propriedades translate/scale (não conflitam com transform de hover) e só opacity/translate/scale = fluido */
+.fx-dock{animation:fxDock var(--fx-dock-dur) var(--fx-ease-dock) var(--d,0ms) backwards;will-change:translate,scale,opacity}
+.fx-dock.fx-snap{animation:fxDock var(--fx-dock-dur) var(--fx-ease-dock) var(--d,0ms) backwards,fxSnap .55s ease-out calc(var(--d,0ms) + var(--fx-snap-at)) backwards}
+@keyframes fxDock{0%{opacity:0;translate:var(--fx-x,0px) var(--fx-y,30px);scale:.94}65%{opacity:1;translate:calc(var(--fx-x,0px)*-.035) calc(var(--fx-y,30px)*-.035);scale:1.012}100%{opacity:1;translate:0 0;scale:1}}
+@keyframes fxSnap{0%{outline:2px solid rgba(90,150,255,0);outline-offset:-2px}35%{outline:2px solid rgba(90,150,255,.5);outline-offset:0}100%{outline:2px solid rgba(90,150,255,0);outline-offset:5px}}
+.fx-row{animation:fxRow .4s var(--fx-ease-dock) var(--d,0ms) backwards}
+@keyframes fxRow{from{opacity:0;translate:0 12px}to{opacity:1;translate:0 0}}
+html[data-anim="off"] .fx-dock,html[data-anim="off"] .fx-row{animation:none!important}
 /* micro-interações */
-.btn-action,.periodo-btn,.tab-btn,.chip,.px-chip,.vadd,.cal-add,.vp-it,.mb-b,.ax-btn,.mb-ch button{transition:transform .18s var(--fx-ease),box-shadow .2s,filter .2s,background-color .25s,color .25s,border-color .25s}
+.btn-action,.periodo-btn,.tab-btn,.chip,.px-chip,.vadd,.cal-add,.vp-it,.mb-b,.ax-btn,.mb-ch button{transition:transform .18s var(--fx-ease-dock),box-shadow .2s,filter .2s,background-color .25s,color .25s,border-color .25s}
 .chip:hover,.px-chip:hover,.vp-it:hover,.periodo-btn:hover{transform:translateY(-1px)}
 .btn-action:active,.periodo-btn:active,.tab-btn:active,.chip:active,.px-chip:active,.vadd:active,.cal-add:active,.vp-it:active,.mb-b:active,.mb-ch button:active{transform:scale(.95)}
-.stat-card,.cal-day,.fila-item{transition:transform .25s var(--fx-ease),box-shadow .25s}.stat-card:active,.cal-day:active{transform:scale(.99)}
-tbody tr{transition:transform .2s var(--fx-ease),filter .2s,background-color .2s}
-@media (prefers-reduced-motion:reduce){.fx-shell,.fx-focus,.fx-veil:after{animation:none!important}html .tab-conteudo.ativo,html .dc-pane.on,html .cv-pane.on{animation:none!important}}
+.stat-card,.cal-day,.fila-item{transition:transform .25s var(--fx-ease-dock),box-shadow .25s}.stat-card:active,.cal-day:active{transform:scale(.99)}
+tbody tr{transition:transform .2s var(--fx-ease-dock),filter .2s,background-color .2s}
+@media (prefers-reduced-motion:reduce){.fx-dock,.fx-row{animation:none!important}}
 </style>
 </head>
 <body>
@@ -2820,79 +2815,99 @@ tbody tr{transition:transform .2s var(--fx-ease),filter .2s,background-color .2s
 
 </script>
 <script>
-/* Efeitos (vídeo "Glassy Dashboard"): véu fosco -> cartões de vidro -> conteúdo em foco + contagem a partir do zero.
-   Só adiciona classes/estilos; não toca em dados, formulários ou listeners existentes. */
+/* Efeitos: blocos que se encaixam coluna a coluna + números contando do zero + montagem de abertura + nível de animação.
+   Só adiciona classes/estilos; não toca em dados, formulários ou listeners existentes. Sem desfoque (leve e fluido). */
 (function () {
   "use strict";
-  const CFG = { maxItens: 30, maxIndice: 14, contagemMs: 900 };                  // itens animados, índice máx. do atraso, duração da contagem
-  const reduz = matchMedia("(prefers-reduced-motion: reduce)");
-  const PANES = ".tab-conteudo,.dc-pane,.cv-pane,.fr-sub,#fr-proximas";           // painéis que aparecem/desaparecem
-  const ALVOS = ".card,.stat-card,.cal-day,.fila-item,tbody>tr";                  // o que entra em cascata
-  const CASCOS = ".card,.stat-card,.cal-day,.fila-item";                          // dentro destes: casco primeiro, conteúdo depois
-  const FILHOS_PROPRIOS = ".stat-card,.cal-day,tbody>tr";                         // filhos que já animam sozinhos
-  const NUM = ".stat-numero,#dc-dia,#mb-a,#mb-d,#mb-v";                           // números com contagem (#dc-mes já tem a sua)
-
+  const CFG = { col: 110, row: 65, atrasoMax: 700, max: 26, linhas: 10, passoLinha: 35, dist: 120, contagemMs: 900 };
+  const root = document.documentElement, reduz = matchMedia("(prefers-reduced-motion: reduce)");
+  const PANES = ".tab-conteudo,.dc-pane,.cv-pane,.fr-sub,#fr-proximas";            // painéis que aparecem/desaparecem
+  const BLOCOS = ".card,.stat-card,.cal-day,.fila-item", INTERNOS = ".stat-card,.cal-day";
+  const NUM = ".stat-numero,#dc-dia,#mb-a,#mb-d,#mb-v";                            // números com contagem (#dc-mes já tem a sua)
+  const nivel = () => reduz.matches ? "off" : (root.getAttribute("data-anim") || "full");
+  const mobile = () => root.classList.contains("mobile"), lim = (v, a, b) => Math.max(a, Math.min(b, v));
   const visivel = (cls, el) => el.matches(".tab-conteudo") ? /(^|\s)ativo(\s|$)/.test(cls)
     : el.matches(".dc-pane,.cv-pane") ? /(^|\s)on(\s|$)/.test(cls) : !/(^|\s)hidden(\s|$)/.test(cls);
-  const anim = (e, cls) => { e.classList.remove(cls); void e.offsetWidth; e.classList.add(cls); };
+  const limpar = e => { e.classList.remove("fx-dock", "fx-snap", "fx-row"); e.style.removeProperty("--fx-x"); e.style.removeProperty("--fx-y"); e.style.removeProperty("--d"); };
+  const livre = e => e.offsetParent !== null && !e.contains(document.activeElement);   // visível e sem campo em edição
 
-  // ---- cascata em duas fases (nunca em quem contém o campo em foco) ----
-  function cascata(els) {
-    let i = 0;
-    els.filter(e => e.offsetParent !== null && !e.contains(document.activeElement)).slice(0, CFG.maxItens).forEach(e => {
-      const idx = Math.min(i++, CFG.maxIndice); e.style.setProperty("--i", idx);
-      if (e.matches(CASCOS)) {
-        anim(e, "fx-shell");
-        [...e.children].filter(c => !c.querySelector(FILHOS_PROPRIOS)).slice(0, 8).forEach(c => { c.style.setProperty("--i", idx); anim(c, "fx-focus"); });
-      } else anim(e, "fx-focus");                                                  // linhas de tabela
+  // ---- encaixe: agrupa por coluna (esq.→dir.) e, dentro dela, de cima para baixo; cada bloco vem do seu lado ----
+  function dock(lista, base, k, mob) {
+    const info = lista.map(e => ({ e, r: e.getBoundingClientRect() })), cols = [];
+    info.slice().sort((a, b) => a.r.left - b.r.left).forEach(o => { const c = cols.find(c => Math.abs(c.left - o.r.left) < 70); c ? c.itens.push(o) : cols.push({ left: o.r.left, itens: [o] }); });
+    const plano = [], lvl = nivel();
+    cols.sort((a, b) => a.left - b.left).forEach((c, ci) => c.itens.sort((a, b) => a.r.top - b.r.top).forEach((o, ri) => plano.push({ o, ci, ri })));
+    plano.slice(0, CFG.max).forEach(({ o, ci, ri }, n) => {
+      const cx = (o.r.left + o.r.width / 2) / innerWidth - .5, cy = (o.r.top + o.r.height / 2) / innerHeight - .5;
+      let x = mob ? (n % 2 ? 1 : -1) * 36 : lim(cx * 2 * CFG.dist, -CFG.dist, CFG.dist), y = mob ? 26 : lim(cy * 180, -90, 90);
+      if (!mob && Math.abs(x) < 30 && Math.abs(y) < 30) y = 44;
+      o.e.__fxD = Math.min(base + (mob ? 0 : ci * CFG.col) + ri * CFG.row, base + CFG.atrasoMax);
+      limpar(o.e); o.e.style.setProperty("--fx-x", Math.round(x * k) + "px"); o.e.style.setProperty("--fx-y", Math.round(y * k) + "px"); o.e.style.setProperty("--d", o.e.__fxD + "ms");
+      o.alvo = true;
+    });
+    void root.offsetWidth;                                                         // 1 única releitura de layout para reiniciar as animações
+    plano.slice(0, CFG.max).forEach(({ o }) => { o.e.classList.add("fx-dock"); if (lvl === "full") o.e.classList.add("fx-snap"); });
+  }
+  function linhas(raiz, base) {                                                    // primeiras linhas de cada tabela entram em cascata curta
+    raiz.querySelectorAll("tbody").forEach(tb => {
+      if (tb.offsetParent === null) return;
+      [...tb.rows].slice(0, CFG.linhas).filter(livre).forEach((tr, i) => { limpar(tr); tr.style.setProperty("--d", (base + i * CFG.passoLinha) + "ms"); tr.classList.add("fx-row"); });
     });
   }
-  function revelar(pane) {
-    if (reduz.matches) return;
-    anim(pane, "fx-veil");
-    cascata([...pane.querySelectorAll(ALVOS)]);
-    pane.querySelectorAll(NUM).forEach(contagemEntrada);
+  function montar(pane, base) {
+    const lvl = nivel(); if (lvl === "off") return; base = base || 0;
+    const blocos = [...pane.querySelectorAll(BLOCOS)].filter(e => livre(e) && !e.querySelector(INTERNOS));
+    dock(blocos, base, lvl === "reduced" ? .4 : 1, mobile());
+    linhas(pane, base + 240);
+    pane.querySelectorAll(NUM).forEach(el => { const b = el.closest(".stat-card,.card,.cal-day"); contagemEntrada(el, ((b && b.__fxD) || base) + 380); });
+  }
+  function abertura() {                                                            // montagem inicial: topo desce, menu sobe, depois os blocos
+    const lvl = nivel(); if (lvl === "off") return; const k = lvl === "reduced" ? .4 : 1;
+    [["header", 0, -70], [".banner-aniversario", 0, -50], ["#mb-app", 0, -50], ["#mb-strip", 90, -40], [".container > .tabs", 160, 80]].forEach(([s, d, y]) => {
+      const e = document.querySelector(s); if (!e || e.offsetParent === null) return;
+      limpar(e); e.style.setProperty("--fx-x", "0px"); e.style.setProperty("--fx-y", Math.round(y * k) + "px"); e.style.setProperty("--d", d + "ms"); e.classList.add("fx-dock");
+    });
+    const a = document.querySelector(".tab-conteudo.ativo"); if (a) montar(a, 220);
   }
   function tabela(tb) {                                                            // 1ª carga de tabela vazia (as atualizações seguintes não animam)
     const n = tb.rows.length, antes = tb.__fxN || 0; tb.__fxN = n;
-    if (!antes && n && !reduz.matches && tb.offsetParent !== null) cascata([...tb.rows]);
+    if (!antes && n && nivel() !== "off" && tb.offsetParent !== null) linhas({ querySelectorAll: () => [tb] }, 120);
   }
   document.addEventListener("animationend", e => {                                 // devolve o elemento ao estado normal
     const t = e.target, n = e.animationName;
-    if (n === "fxShell" || n === "fxFocus") { t.classList.remove(n === "fxShell" ? "fx-shell" : "fx-focus"); t.style.removeProperty("--i"); }
-    else if (n === "fxVeil") t.classList.remove("fx-veil");
+    if (n === "fxSnap" || n === "fxRow" || (n === "fxDock" && !t.classList.contains("fx-snap"))) limpar(t);
   }, true);
 
-  // ---- contagem animada: mantém prefixo/sufixo/casas decimais ----
+  // ---- contagem: do zero até o valor ao abrir a tela; do mostrado até o novo quando o valor muda ----
   function ler(txt) {
     const m = /^(\D*?)(-?\d[\d.]*(?:,\d+)?)(\D*)$/.exec(txt.trim()); if (!m) return null;
     const num = m[2], ponto = !num.includes(",") && /^-?\d+\.\d{1,2}$/.test(num);   // "12.5" = decimal; "1.234" = milhar
     const d = ponto ? num.split(".")[1].length : (num.split(",")[1] || "").length;
     return { p: m[1], s: m[3], d, ponto, v: ponto ? parseFloat(num) : parseFloat(num.replace(/\./g, "").replace(",", ".")) };
   }
-  const estado = el => el.__fx || (el.__fx = { w: null, cur: null, raf: 0, final: null });
+  const fmt = (n, v) => n.p + (n.ponto ? v.toFixed(n.d) : v.toLocaleString("pt-BR", { minimumFractionDigits: n.d, maximumFractionDigits: n.d })) + n.s;
+  const estado = el => el.__fx || (el.__fx = { w: null, cur: null, raf: 0, final: null, t: 0 });
   function animar(alvo, de, novo, fim) {
-    const st = estado(alvo), t0 = performance.now(); cancelAnimationFrame(st.raf); st.final = fim;
+    const st = estado(alvo), t0 = performance.now(), dur = nivel() === "reduced" ? 550 : CFG.contagemMs; cancelAnimationFrame(st.raf); st.final = fim;
     const passo = t => {
-      const p = Math.min(1, (t - t0) / CFG.contagemMs), v = de + (novo.v - de) * (1 - Math.pow(1 - p, 3));
-      st.cur = v;
-      st.w = p < 1 ? novo.p + (novo.ponto ? v.toFixed(novo.d) : v.toLocaleString("pt-BR", { minimumFractionDigits: novo.d, maximumFractionDigits: novo.d })) + novo.s : fim;
-      alvo.textContent = st.w;
+      const p = Math.min(1, (t - t0) / dur), v = de + (novo.v - de) * (1 - Math.pow(1 - p, 3));
+      st.cur = v; st.w = p < 1 ? fmt(novo, v) : fim; alvo.textContent = st.w;
       if (p < 1) st.raf = requestAnimationFrame(passo); else { st.raf = 0; st.cur = novo.v; }
     };
     st.raf = requestAnimationFrame(passo);
   }
-  function contagemEntrada(el) {                                                   // ao abrir uma tela: do zero até o valor
-    if (el.offsetParent === null || reduz.matches) return;
-    const st = estado(el), fim = st.raf && st.final ? st.final : el.textContent, n = ler(fim);
-    if (n) animar(el, 0, n, fim);
+  function contagemEntrada(el, atraso) {                                           // mostra zero já e começa a contar quando o bloco assenta
+    if (!livre(el) || nivel() === "off") return;
+    const st = estado(el), fim = st.raf && st.final ? st.final : el.textContent, n = ler(fim); if (!n) return;
+    clearTimeout(st.t); cancelAnimationFrame(st.raf); st.final = fim; st.cur = 0; st.w = fmt(n, 0); el.textContent = st.w;
+    st.t = setTimeout(() => animar(el, 0, n, fim), atraso);
   }
-  function contar(node) {                                                          // quando o valor muda: do mostrado até o novo
+  function contar(node) {
     const el = node.nodeType === 1 ? node : node.parentElement; if (!el || !el.closest) return;
     const alvo = el.closest(NUM); if (!alvo) return;
     const st = estado(alvo), txt = alvo.textContent;
     if (txt === st.w) return;                                                      // foi a nossa própria escrita
-    const novo = ler(txt); if (!novo || reduz.matches) { st.cur = novo ? novo.v : null; return; }
+    clearTimeout(st.t); const novo = ler(txt); if (!novo || nivel() === "off") { st.cur = novo ? novo.v : null; return; }
     const de = st.cur != null ? st.cur : 0; if (de !== novo.v) animar(alvo, de, novo, txt);
   }
 
@@ -2901,13 +2916,25 @@ tbody tr{transition:transform .2s var(--fx-ease),filter .2s,background-color .2s
     for (const m of ms) {
       if (m.type === "attributes") {
         const el = m.target;
-        if (el.matches && el.matches(PANES) && !visivel(m.oldValue || "", el) && visivel(el.className, el)) revelar(el);
+        if (el.matches && el.matches(PANES) && !visivel(m.oldValue || "", el) && visivel(el.className, el)) montar(el);
       } else if (m.type === "childList" && m.target.tagName === "TBODY") tabela(m.target);
       if (m.type !== "attributes") contar(m.target);
     }
   }).observe(document.body, { subtree: true, attributes: true, attributeFilter: ["class"], attributeOldValue: true, childList: true, characterData: true });
 
-  setTimeout(() => { const a = document.querySelector(".tab-conteudo.ativo"); if (a) revelar(a); }, 250);   // aba inicial
+  // ---- botão de nível: Completas / Reduzidas / Desligadas (salvo neste aparelho) ----
+  const NIVEIS = [["full", "Completas", "🎞"], ["reduced", "Reduzidas", "🎞·"], ["off", "Desligadas", "🎞✕"]];
+  const ua = document.querySelector(".user-area"), bt = document.createElement("button"), mbBar = document.getElementById("mb-app"); let mb = null;
+  bt.type = "button"; bt.className = "btn-login"; bt.id = "btn-anim"; if (ua) ua.insertBefore(bt, ua.firstChild);
+  if (mbBar) { mb = document.createElement("button"); mb.type = "button"; mb.className = "mb-b sec"; mb.id = "mb-anim"; mbBar.insertBefore(mb, document.getElementById("mb-tema") || document.getElementById("mb-ver")); }
+  const rot = () => { const n = NIVEIS.find(x => x[0] === (root.getAttribute("data-anim") || "full")) || NIVEIS[0]; bt.textContent = "🎞 " + n[1]; bt.title = "Animações: clique para alternar"; if (mb) { mb.textContent = n[2]; mb.title = "Animações: " + n[1]; } };
+  const troca = () => { const i = NIVEIS.findIndex(x => x[0] === (root.getAttribute("data-anim") || "full")), n = NIVEIS[(i + 1) % 3][0]; root.setAttribute("data-anim", n); try { localStorage.setItem("cd84_anim", n); } catch (e) {} rot(); };
+  bt.onclick = troca; if (mb) mb.onclick = troca; rot();
+
+  // montagem de abertura (se a escolha de versão estiver aberta, espera ela fechar)
+  const vs = document.getElementById("vs-back");
+  if (vs && vs.classList.contains("on")) { const o = new MutationObserver(() => { if (!vs.classList.contains("on")) { o.disconnect(); requestAnimationFrame(abertura); } }); o.observe(vs, { attributes: true, attributeFilter: ["class"] }); }
+  else abertura();
 })();
 </script>
 </body>
