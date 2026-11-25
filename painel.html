@@ -2740,7 +2740,7 @@ tbody tr{transition:transform .2s var(--fx-ease-dock),filter .2s,background-colo
 
   window.cd84Form = cfg => new Promise(resolve => {
     res = resolve;
-    back.innerHTML = `<form class="ed-card" id="fm-f" novalidate><div class="ed-h"><b>${esc(cfg.title)}</b><button type="button" class="vi-x" data-fm-x title="Fechar">✕</button></div>
+    back.innerHTML = `<form class="ed-card" id="fm-form" novalidate><div class="ed-h"><b>${esc(cfg.title)}</b><button type="button" class="vi-x" data-fm-x title="Fechar">✕</button></div>
       ${cfg.sub ? `<div class="ed-sub">${esc(cfg.sub)}</div>` : ""}
       ${cfg.fields.map(f => `<label class="ed-l">${esc(f.label)}<input id="fm-${f.id}" value="${esc(f.value || "")}" placeholder="${esc(f.placeholder || "")}" ${f.list ? `list="${f.list}"` : ""} ${f.max ? `maxlength="${f.max}"` : ""} autocomplete="off" style="${f.placa ? "text-transform:uppercase;font-weight:800;letter-spacing:1px" : ""}"></label>`).join("")}
       <div class="ed-err" id="fm-err"></div>
@@ -2751,7 +2751,7 @@ tbody tr{transition:transform .2s var(--fx-ease-dock),filter .2s,background-colo
       el.oninput = () => { let v = el.value.toUpperCase().replace(/[^A-Z0-9]/g, ""); if (v.length > 3) v = v.substring(0, 3) + "-" + v.substring(3, 7); el.value = v; };
     });
     setTimeout(() => { const el = document.getElementById("fm-" + cfg.fields[0].id); if (el) { el.focus(); el.select && el.select(); } }, 30);
-    document.getElementById("fm-f").onsubmit = e => {
+    document.getElementById("fm-form").onsubmit = e => {
       e.preventDefault(); const out = {}, err = document.getElementById("fm-err"); err.textContent = "";
       for (const f of cfg.fields) {
         let v = document.getElementById("fm-" + f.id).value.trim(); if (f.placa) v = v.toUpperCase();
