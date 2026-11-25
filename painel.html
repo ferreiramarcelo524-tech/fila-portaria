@@ -534,7 +534,6 @@ tbody tr{transition:transform .2s var(--fx-ease-dock),filter .2s,background-colo
     const db = firebase.firestore();
     const auth = firebase.auth();
 
-    // Controla qual aba está ativa e evita recarregar estatísticas à toa
     function mudarAbaPainel(nomeAba) {
         const abas = ['operacao', 'doca', 'estatisticas', 'financeiro'];
         abas.forEach(a => {
@@ -548,7 +547,7 @@ tbody tr{transition:transform .2s var(--fx-ease-dock),filter .2s,background-colo
     }
 
     let periodoEstatisticasAtual = 'hoje';
-    let dataEspecificaEscolhida = null; // 'YYYY-MM-DD' quando o calendário está em uso
+    let dataEspecificaEscolhida = null;
     let ultimoCarregamentosParaExport = [];
 
     function mudarPeriodoEstatisticas(periodo) {
@@ -561,9 +560,6 @@ tbody tr{transition:transform .2s var(--fx-ease-dock),filter .2s,background-colo
         carregarEstatisticas();
     }
 
-    // CALENDÁRIO: consulta um dia específico, independente dos botões
-    // Hoje/7 dias/30 dias (que ficam desmarcados enquanto uma data
-    // específica estiver selecionada).
     function selecionarDataEspecifica() {
         const valor = document.getElementById('dataEspecifica').value;
         if (!valor) return;
@@ -591,9 +587,6 @@ tbody tr{transition:transform .2s var(--fx-ease-dock),filter .2s,background-colo
         return { inicio: agora.getTime() - (dias * 24 * 60 * 60 * 1000), fim: agora.getTime() };
     }
 
-    // Intervalo anterior equivalente, usado só para a comparação
-    // percentual (ex: "hoje" compara com "ontem"; "7 dias" compara com
-    // os 7 dias anteriores a esses).
     function calcularIntervaloAnterior(intervaloAtual) {
         const duracao = intervaloAtual.fim - intervaloAtual.inicio;
         return { inicio: intervaloAtual.inicio - duracao, fim: intervaloAtual.inicio };
@@ -603,25 +596,16 @@ tbody tr{transition:transform .2s var(--fx-ease-dock),filter .2s,background-colo
         const intervalo = calcularIntervaloPeriodo(periodoEstatisticasAtual);
         const intervaloAnterior = calcularIntervaloAnterior(intervalo);
 
-        // Consulta 1: carregamentos CONCLUÍDOS no período (por
-        // timestampSaida) — igual à lógica original, alimenta total,
-        // tempo médio, gráfico por dia, filial, conferente, doca e
-        // motorista.
         const consultaCarregamentos = db.collection("fila_patio")
             .where("timestampSaida", ">=", intervalo.inicio)
             .where("timestampSaida", "<=", intervalo.fim)
             .get();
 
-        // Consulta 2: TODAS as chegadas do período (qualquer status,
-        // por timestampChegada) — alimenta taxa de cancelamento, %
-        // cadastro manual e distribuição por horário de chegada.
         const consultaChegadas = db.collection("fila_patio")
             .where("timestampChegada", ">=", intervalo.inicio)
             .where("timestampChegada", "<=", intervalo.fim)
             .get();
 
-        // Consulta 3 (leve, só contagem): total de carregamentos do
-        // período anterior equivalente, para a comparação percentual.
         const consultaPeriodoAnterior = db.collection("fila_patio")
             .where("timestampSaida", ">=", intervaloAnterior.inicio)
             .where("timestampSaida", "<=", intervaloAnterior.fim)
@@ -661,12 +645,9 @@ tbody tr{transition:transform .2s var(--fx-ease-dock),filter .2s,background-colo
     function renderizarEstatisticas(carregamentos, chegadas, totalAnterior) {
         ultimoCarregamentosParaExport = carregamentos;
 
-        // Limpa o filtro de busca sempre que um novo período é carregado,
-        // para não deixar uma busca antiga escondendo dados do período novo.
         const inputBusca = document.getElementById('buscaDetalhamento');
         if (inputBusca) inputBusca.value = '';
 
-        // 1) Total + comparação com período anterior
         document.getElementById('statTotalCarregamentos').innerText = carregamentos.length;
         const elComparativo = document.getElementById('statComparativo');
         if (totalAnterior > 0) {
@@ -678,10 +659,6 @@ tbody tr{transition:transform .2s var(--fx-ease-dock),filter .2s,background-colo
             elComparativo.innerHTML = '';
         }
 
-        // 2) Tempo médio no pátio (geral) + separado em fila/doca.
-        // Tempo Aguardando e Tempo em Doca só existem para carregamentos
-        // feitos DEPOIS desta atualização (dependem do campo novo
-        // timestampChamada, gravado ao clicar "Chamar Doca").
         let somaTempos = 0, contagemValidos = 0;
         let somaFila = 0, contagemFila = 0;
         let somaDoca = 0, contagemDocaTempo = 0;
@@ -705,21 +682,17 @@ tbody tr{transition:transform .2s var(--fx-ease-dock),filter .2s,background-colo
         document.getElementById('statTempoFila').innerText = contagemFila > 0 ? formatarDuracao(somaFila / contagemFila) : '-';
         document.getElementById('statTempoDoca').innerText = contagemDocaTempo > 0 ? formatarDuracao(somaDoca / contagemDocaTempo) : '-';
 
-        // 3) Taxa de cancelamento (baseada em TODAS as chegadas do
-        // período, não só nos carregamentos concluídos).
         const totalChegadas = chegadas.length;
         const totalCancelados = chegadas.filter(c => c.status === 'Cancelado').length;
         document.getElementById('statTaxaCancelamento').innerText = totalChegadas > 0
             ? ((totalCancelados / totalChegadas) * 100).toFixed(1) + '%'
             : '-';
 
-        // 4) % Cadastro Manual (também baseado nas chegadas do período)
         const totalManual = chegadas.filter(c => c.orgao && c.orgao.indexOf('Cadastro Manual') !== -1).length;
         document.getElementById('statPercManual').innerText = totalChegadas > 0
             ? ((totalManual / totalChegadas) * 100).toFixed(1) + '%'
             : '-';
 
-        // 5) Carregamentos por dia (gráfico)
         let porDia = {};
         carregamentos.forEach(c => {
             if (!c.timestampSaida) return;
@@ -729,7 +702,6 @@ tbody tr{transition:transform .2s var(--fx-ease-dock),filter .2s,background-colo
         });
         renderizarGraficoBarras('graficoPorDia', porDia, true);
 
-        // 6) Distribuição por horário de chegada (todas as chegadas do período)
         let porHora = {};
         for (let h = 0; h < 24; h++) porHora[String(h).padStart(2, '0') + 'h'] = 0;
         chegadas.forEach(c => {
@@ -740,31 +712,13 @@ tbody tr{transition:transform .2s var(--fx-ease-dock),filter .2s,background-colo
         });
         renderizarGraficoBarras('graficoPorHora', porHora, false);
 
-        // 7) Detalhamento unificado (tabela editável, mesma informação
-        // do CSV exportado) — fica em evidência, antes dos rankings.
         renderizarDetalhamento(carregamentos);
-
-        // 8) Por filial (tabela simples, sem posição de ranking)
         renderizarTabelaSimples(carregamentos, c => c.filial || '-', 'tabelaPorFilial', 'msgFilialVazio');
-
-        // 9) Ranking por doca (novo)
         renderizarRanking(carregamentos, c => c.doca || '-', 'tabelaPorDoca', 'msgDocaRankingVazio');
-
-        // 10) Ranking por conferente
         renderizarRanking(carregamentos.filter(c => c.conferente && c.conferente !== '-'), c => c.conferente, 'tabelaPorConferente', 'msgConferenteVazio');
-
-        // 11) Ranking por motorista, agora com as placas associadas
         renderizarRankingMotorista(carregamentos);
     }
 
-    // Tabela de detalhamento: mesma base de dados do CSV, mas exibida
-    // direto na tela, com botão de editar em cada linha — corrige o
-    // problema de digitação (ex: "Marcos rai" vs "marcos Rai" contando
-    // como duas pessoas diferentes nos rankings) direto na origem.
-    // Filtra a tabela de Detalhamento por placa, motorista, filial, doca
-    // ou conferente. Roda inteiramente sobre os dados já carregados na
-    // tela (ultimoCarregamentosParaExport) — não gera nenhuma consulta
-    // nova ao Firestore.
     function filtrarDetalhamento() {
         const termo = document.getElementById('buscaDetalhamento').value.trim().toLowerCase();
         if (!termo) {
@@ -824,8 +778,6 @@ tbody tr{transition:transform .2s var(--fx-ease-dock),filter .2s,background-colo
         }
     }
 
-    // Ranking por motorista, incluindo a lista de placas que ele já
-    // rodou no período (um motorista pode ter mais de um veículo).
     function renderizarRankingMotorista(carregamentos) {
         let grupos = {};
         carregamentos.forEach(c => {
@@ -852,10 +804,6 @@ tbody tr{transition:transform .2s var(--fx-ease-dock),filter .2s,background-colo
         }
     }
 
-    // EDITAR CARREGAMENTO: corrige placa/motorista/filial/doca/conferente
-    // de um registro já feito (ativo ou histórico). Essencial para
-    // corrigir erros de digitação que criam entradas duplicadas nos
-    // rankings (ex: variações de escrita do nome de um conferente).
     window.editarCarregamento = async (id, placaAtual, motoristaAtual, filialAtual, docaAtual, conferenteAtual) => {
         if(!usuarioLogado) { alert("Acesso negado! Faça o login de administrador primeiro."); return; }
         const r = await window.cd84Form({ title: "Editar carregamento", fields: [{ id: "p", label: "Placa", value: placaAtual, placa: 1, required: 1, max: 8 }, { id: "m", label: "Motorista", value: motoristaAtual }, { id: "f", label: "Filial destino", value: filialAtual, list: "dl-f" }, { id: "d", label: "Doca", value: docaAtual, list: "dl-d" }, { id: "c", label: "Conferente", value: conferenteAtual }], ok: "Salvar" });
@@ -942,9 +890,6 @@ tbody tr{transition:transform .2s var(--fx-ease-dock),filter .2s,background-colo
         }
     }
 
-    // EXPORTAR CSV: gera um arquivo com os carregamentos do período
-    // atualmente carregado na tela (mesmo conjunto usado nos gráficos
-    // e rankings acima).
     function exportarCSV() {
         if (!ultimoCarregamentosParaExport || ultimoCarregamentosParaExport.length === 0) {
             alert("Não há dados para exportar no período selecionado.");
@@ -1121,9 +1066,6 @@ tbody tr{transition:transform .2s var(--fx-ease-dock),filter .2s,background-colo
             });
         }
 
-        // ===== ABA "DOCA": mesmos dados de noPatio, filtrados por status
-        // "Em Doca". Não gera nenhuma leitura extra no Firestore, pois
-        // reaproveita o snapshot que já foi buscado acima. =====
         const veiculosEmDoca = noPatio.filter(v => v.status === 'Em Doca');
         tabelaDoca.innerHTML = '';
         if (veiculosEmDoca.length === 0) {
@@ -1160,10 +1102,6 @@ tbody tr{transition:transform .2s var(--fx-ease-dock),filter .2s,background-colo
         } catch (err) { alert("Erro ao adicionar veículo: " + err.message); }
     };
 
-    // DEVOLVER PARA FILA: limpa filial/doca/conferente e volta o status
-    // para "Aguardando" — como o timestampChegada NUNCA é alterado (nem
-    // aqui, nem em chamar()), o veículo volta sozinho para a mesma
-    // posição relativa que ocupava antes de ser chamado para a doca.
     window.devolverParaFila = (id, placa) => {
         if(!usuarioLogado) { alert("Acesso negado! Faça o login de administrador primeiro."); return; }
         if (confirm(`Devolver o veículo ${placa} para a fila de espera? Os dados de doca/filial/conferente serão apagados.`)) {
@@ -1264,7 +1202,11 @@ tbody tr{transition:transform .2s var(--fx-ease-dock),filter .2s,background-colo
 <script>document.getElementById("frameTV").src="https://ferreiramarcelo524-tech.github.io/painel-expedicao/?t="+Date.now();</script>
 <script src="frete.js"></script>
 <script>
-/* docas.js v2 — aba "Expedição" (Carregamentos | Histórico | Cadastros | Calendário) */
+/* docas.js v2.1 — aba "Expedição" (Carregamentos | Histórico | Cadastros | Calendário)
+   Contabilidade revisada:
+   1. Faturamento do dia = Total programado do dia (finalizados hoje + pátio). Não altera ao finalizar cargas.
+   2. A finalizar (pátio) = Soma das cargas ativas no pátio. Diminui gradativamente ou zera em "Expedição finalizada".
+   3. Faturamento do mês = Soma somente das cargas finalizadas no mês. */
 (function () {
   const db = firebase.firestore(), auth = firebase.auth(), F = firebase.firestore.FieldValue;
   const CAL0 = {
@@ -1288,7 +1230,7 @@ tbody tr{transition:transform .2s var(--fx-ease-dock),filter .2s,background-colo
   const parse = k => (CAL0[k] || "").split(",").filter(Boolean).map(s => { const [f, d] = s.split(":"); return { f, d: "DOCA " + d }; });
   let ativos = [], tipos = [], filiais = [], docasL = [], fila = [], placas = [], cal = {}, hist = [], hPer = 7;
   let filaMap = {}, filaOk = false, sel = new Set(), carregou = false, calOk = false, hView = "lista", calRows = 12, calExtra = {};
-  let dataSel = iso(new Date()), rDia = 0, rMes = 0, mesMostrado = 0, atraso = 0;
+  let dataSel = iso(new Date()), rDia = 0, rMes = 0, mesMostrado = 0, atraso = 0, emTransacao = false;
 
   // ---------- UI ----------
   const st = document.createElement("style");
@@ -1314,7 +1256,8 @@ tbody tr{transition:transform .2s var(--fx-ease-dock),filter .2s,background-colo
         ${Object.keys(DIAS).map(k => `<button class="periodo-btn" data-dia="${k}">${DIAS[k]}</button>`).join("")}
         <button class="btn-action btn-add" id="dc-add" style="margin:0">+ Linha</button>
         <button class="btn-action btn-done" id="dc-fim" style="margin:0">Expedição finalizada</button></div></div>
-    <div class="stats-grid"><div class="stat-card"><div class="stat-numero" id="dc-dia">-</div><div class="stat-label">Faturamento do dia</div></div>
+    <div class="stats-grid"><div class="stat-card"><div class="stat-numero" id="dc-dia">-</div><div class="stat-label">Faturamento do dia (total)</div></div>
+    <div class="stat-card"><div class="stat-numero" id="dc-pat">-</div><div class="stat-label">A finalizar (pátio)</div></div>
     <div class="stat-card"><div class="stat-numero" id="dc-mes">-</div><div class="stat-label">Faturamento do mês (só finalizados) <button class="btn-action btn-edit" id="dc-adj" style="margin:0 0 0 6px;padding:2px 8px">± Ajustar</button></div></div></div>
     <div class="periodo-seletor" style="margin-bottom:8px">Ordenar por <select id="o-col"><option value="manual">Manual</option><option value="filial">Filial</option><option value="doca">Doca</option><option value="valor">Maior valor</option></select>
     Tipo primeiro <select id="o-tipo"></select><span id="dc-sel" style="font-weight:700;margin-left:auto;color:#0f52ba"></span></div>
@@ -1347,6 +1290,7 @@ tbody tr{transition:transform .2s var(--fx-ease-dock),filter .2s,background-colo
     document.querySelectorAll(".tab-conteudo").forEach(e => e.classList.remove("ativo"));
     document.querySelectorAll(".container > .tabs > .tab-btn").forEach(e => e.classList.remove("active"));
     sec.classList.add("ativo"); btn.classList.add("active");
+    totais(true);
   };
   document.addEventListener("click", e => {
     const b = e.target.closest(".tab-btn");
@@ -1356,7 +1300,9 @@ tbody tr{transition:transform .2s var(--fx-ease-dock),filter .2s,background-colo
   // ---------- Animações ----------
   function voar(v) {
     if (!v) return;
-    const a = $("dc-dia").getBoundingClientRect(), b = $("dc-mes").getBoundingClientRect(), el = document.createElement("div");
+    const a = $("dc-pat").getBoundingClientRect(), b = $("dc-mes").getBoundingClientRect();
+    if (!a.width || !b.width) return;
+    const el = document.createElement("div");
     el.textContent = "+ " + BRL(v);
     el.style.cssText = `position:fixed;z-index:9999;font-weight:900;color:#1d9d60;font-size:1.4rem;pointer-events:none;left:${a.left + a.width / 2}px;top:${a.top + a.height / 2}px`;
     document.body.appendChild(el);
@@ -1365,16 +1311,39 @@ tbody tr{transition:transform .2s var(--fx-ease-dock),filter .2s,background-colo
       { duration: 900, easing: "ease-in-out" }).onfinish = () => el.remove();
     atraso = 850;
   }
+  let rafMes = 0;
   function contar(de, para, ms) {
+    cancelAnimationFrame(rafMes);
+    if (ms <= 1 || de === para) {
+      mesMostrado = para;
+      $("dc-mes").textContent = BRL(para);
+      return;
+    }
     const t0 = performance.now();
-    const passo = t => { const p = Math.min(1, (t - t0) / ms); mesMostrado = de + (para - de) * p; $("dc-mes").textContent = BRL(mesMostrado); if (p < 1) requestAnimationFrame(passo); };
-    requestAnimationFrame(passo);
+    const passo = t => {
+      const p = Math.min(1, (t - t0) / ms);
+      mesMostrado = de + (para - de) * (1 - Math.pow(1 - p, 3));
+      $("dc-mes").textContent = BRL(mesMostrado);
+      if (p < 1) rafMes = requestAnimationFrame(passo);
+      else { mesMostrado = para; $("dc-mes").textContent = BRL(para); }
+    };
+    rafMes = requestAnimationFrame(passo);
   }
-  function totais() {
-    const a = ativos.reduce((s, x) => s + (+x.valor || 0), 0);
-    $("dc-dia").textContent = BRL(rDia + a);
+  let totT = null;
+  function totais(imediato) {
+    clearTimeout(totT);
+    if (imediato) totaisAgora();
+    else totT = setTimeout(totaisAgora, 80);
+  }
+  function totaisAgora() {
+    if (emTransacao) return; // Aguarda o fim da gravação em lote para não duplicar a soma durante a transição
+    const aFinalizarPatio = ativos.reduce((s, x) => s + (+x.valor || 0), 0);
+    const totalDia = rDia + aFinalizarPatio;
+    $("dc-dia").textContent = BRL(totalDia);
+    $("dc-pat").textContent = BRL(aFinalizarPatio);
     const de = mesMostrado, d = atraso; atraso = 0;
-    setTimeout(() => contar(de, rMes, d ? 900 : 1), d);
+    if (d) setTimeout(() => contar(de, rMes, 900), d);
+    else contar(de, rMes, 1);
   }
 
   // ---------- Dados ----------
@@ -1542,7 +1511,7 @@ tbody tr{transition:transform .2s var(--fx-ease-dock),filter .2s,background-colo
   };
   const elegivel = x => /^(LOJA\s*)?\d/i.test(String(x.filial || "").trim()) && !/ELETRO/i.test(x.tipo || "");
   let sincT = null;
-  function sincFiliais() {   // veículo em 2+ lojas numeradas: a filial na Operação (e no app) mostra "A/B"; desmarcou, volta ao original
+  function sincFiliais() {
     if (!admin() || !carregou || !filaOk) return;
     clearTimeout(sincT);
     sincT = setTimeout(() => {
@@ -1567,19 +1536,21 @@ tbody tr{transition:transform .2s var(--fx-ease-dock),filter .2s,background-colo
   function arquivar(lote, b) {
     let soma = 0; const vi = new Map();
     lote.forEach(x => {
-      const dt = iso(new Date()), v = +x.valor || 0, todos = veicAtivos(x); soma += v; ajusta(dt, v);
+      const dt = iso(new Date()), v = +x.valor || 0, todos = veicAtivos(x); soma += v;
       todos.forEach(p => { const f = filaMap[norm(p)]; if (f && f.status === "Em Doca") vi.set(f.id, f); });
       b.set(db.collection("docas_historico").doc(x.id), { ...x, veiculo: [...new Set([...todos, ...(x.saiu || [])])].join(", "), dataCarga: x.data || dt, data: dt, finalizadoEm: Date.now() });
       b.delete(db.collection("docas_carregamentos").doc(x.id));
     });
     vi.forEach(f => window.cd84Liberar(b, f, lote.map(r => r.id)));
+    if (soma) { const dt = iso(new Date()), inc = { total: F.increment(soma) }; b.set(db.doc("docas_resumo/dia_" + dt), inc, { merge: true }); b.set(db.doc("docas_resumo/mes_" + dt.slice(0, 7)), inc, { merge: true }); }
     return soma;
   }
   $("dc-fim").onclick = () => {
     if (bloq() || !ativos.length) return;
     if (!confirm("Finalizar a expedição? Todos os valores vão para o mensal, a lista será limpa e os veículos em doca vão para viagem.")) return;
+    emTransacao = true;
     const b = db.batch(), soma = arquivar(ativos, b);
-    b.commit().then(() => voar(soma)).catch(x => alert(x.message));
+    b.commit().then(() => { emTransacao = false; voar(soma); totais(true); }).catch(x => { emTransacao = false; totais(true); alert(x.message); });
   };
   $("dc-add").onclick = () => {
     if (bloq()) return;
@@ -1675,6 +1646,7 @@ tbody tr{transition:transform .2s var(--fx-ease-dock),filter .2s,background-colo
       sec.querySelectorAll("[data-sub]").forEach(b => b.classList.toggle("active", b === t));
       sec.querySelectorAll(".dc-pane").forEach(p => p.classList.toggle("on", p.id === "p-" + t.dataset.sub));
       if (t.dataset.sub === "his") carregarHist(); if (t.dataset.sub === "cal") desenharCal();
+      if (t.dataset.sub === "car") totais(true);
     }
     if (t.dataset.per) {
       hPer = isNaN(+t.dataset.per) ? t.dataset.per : +t.dataset.per;
@@ -1685,7 +1657,9 @@ tbody tr{transition:transform .2s var(--fx-ease-dock),filter .2s,background-colo
       const x = ativos.find(a => a.id === t.dataset.fin); if (!x) return;
       const em = emDoca(x);
       if (em.length && !confirm("Finalizar a carga e colocar em viagem: " + em.join(", ") + "?" + (window.cd84Proximas && window.cd84Proximas.size ? "\n(veículos de lojas de retorno rápido voltam para a fila)" : ""))) return;
-      const b = db.batch(), s = arquivar([x], b); b.commit().then(() => voar(s)).catch(er => alert(er.message));
+      emTransacao = true;
+      const b = db.batch(), s = arquivar([x], b);
+      b.commit().then(() => { emTransacao = false; voar(s); totais(true); }).catch(er => { emTransacao = false; totais(true); alert(er.message); });
     }
     if (t.dataset.del && !bloq() && confirm("Excluir esta linha sem arquivar?")) db.collection("docas_carregamentos").doc(t.dataset.del).delete();
     if (t.dataset.delh && !bloq() && confirm("Excluir este registro do histórico? O valor sai dos totais.")) {
@@ -1757,7 +1731,6 @@ tbody tr{transition:transform .2s var(--fx-ease-dock),filter .2s,background-colo
       .then(() => ["cb-placa", "cb-c", "cb-a", "cb-l"].forEach(i => $(i).value = ""));
   };
 })();
-
 </script>
 <script>
 (function () {
@@ -1779,7 +1752,6 @@ tbody tr{transition:transform .2s var(--fx-ease-dock),filter .2s,background-colo
   varre();
   new MutationObserver(() => { if (!agendado) { agendado = true; requestAnimationFrame(varre); } }).observe(document.body, { childList: true, subtree: true });
 })();
-
 </script>
 <script>
 /* Aba flutuante do veículo (clique na placa na aba Operação) */
@@ -1840,7 +1812,6 @@ tbody tr{transition:transform .2s var(--fx-ease-dock),filter .2s,background-colo
     const t = s.textContent.trim().toUpperCase(); if (RX.test(t)) abrir(t, s);
   });
 })();
-
 </script>
 <script>
 /* Lojas de retorno rápido: viagem registrada, veículo volta à fila */
@@ -1854,7 +1825,6 @@ tbody tr{transition:transform .2s var(--fx-ease-dock),filter .2s,background-colo
     return out;
   };
   window.cd84RetornoRapido = f => { const c = codigos(f); return c.length > 0 && c.every(k => window.cd84Proximas.has(k)); };
-  // Adiciona ao batch a saída do veículo: viagem normal, ou (loja próxima) registro concluído + volta à fila na mesma posição
   window.cd84Liberar = (b, f, skip) => {
     if (window.cd84MarcaSaiu) window.cd84MarcaSaiu(b, f, skip);
     const agora = Date.now(), ref = db.collection("fila_patio").doc(f.id);
@@ -1896,7 +1866,6 @@ tbody tr{transition:transform .2s var(--fx-ease-dock),filter .2s,background-colo
   };
   box.addEventListener("click", e => { const k = e.target.dataset && e.target.dataset.pxDel; if (k && logado()) db.collection("lojas_proximas").doc(k).delete(); });
 })();
-
 </script>
 <script>
 /* Editar dados do veículo (aba Operação / Doca) */
@@ -1936,7 +1905,7 @@ tbody tr{transition:transform .2s var(--fx-ease-dock),filter .2s,background-colo
         const upd = { placa, motorista: val("ed-mot"), email: val("ed-email").toLowerCase() };
         if (rota) { upd.filial = val("ed-filial") || "-"; upd.doca = val("ed-doca") || "-"; upd.conferente = val("ed-conf") || "-"; }
         const b = db.batch(); b.update(ref, upd);
-        if (placa !== d.placa) {   // mantém as linhas da Expedição apontando para a placa corrigida
+        if (placa !== d.placa) {
           const rs = await db.collection("docas_carregamentos").get(), tr = a => (a || []).map(p => p === d.placa ? placa : p);
           rs.forEach(r => {
             const x = r.data(), ch = {}, l = String(x.veiculo || "").split(",").map(p => p.trim()).filter(Boolean);
@@ -1951,11 +1920,9 @@ tbody tr{transition:transform .2s var(--fx-ease-dock),filter .2s,background-colo
     };
   };
 })();
-
 </script>
 <template id="cv-tpl">
 <div class="periodo-seletor" style="margin-bottom:10px"><button type="button" class="periodo-btn active" data-cv-sub="conversor">Conversor de Pedidos</button><button type="button" class="periodo-btn" data-cv-sub="casados">Itens Casados</button><button type="button" class="periodo-btn" data-cv-sub="ajuda">Instruções de Uso</button></div>
-<!-- ABA: CONVERSOR -->
     <div id="cv-p-conversor" class="cv-pane on">
       <div class="card">
         <h2>
@@ -1989,19 +1956,16 @@ tbody tr{transition:transform .2s var(--fx-ease-dock),filter .2s,background-colo
         </div>
       </div>
 
-      <!-- Alerta de Duplicados -->
       <div class="cv-alert" id="alertBox">
         <span id="alertText">Atenção: Existem códigos duplicados na lista.</span>
         <button class="btn-action btn-done" style="padding:4px 10px; font-size:12px;" onclick="cv.unificarDuplicados()">Unificar Duplicados</button>
       </div>
 
-      <!-- Notificação de Itens Casados -->
       <div class="cv-alert cv-pair" id="pairAlertBox">
         <strong id="pairAlertTitle">Atenção: itens casados com quantidade divergente ou incompleta</strong>
         <ul id="pairAlertList"></ul>
       </div>
 
-      <!-- Resultados & Tabela -->
       <div class="cv-result" style="margin-top: 24px;">
         <div class="card" style="margin-bottom:0;">
           <h2>
@@ -2036,7 +2000,6 @@ tbody tr{transition:transform .2s var(--fx-ease-dock),filter .2s,background-colo
       </div>
     </div>
 
-    <!-- ABA: ITENS CASADOS -->
     <div id="cv-p-casados" class="cv-pane">
       <div class="card">
         <h2>
@@ -2084,7 +2047,6 @@ tbody tr{transition:transform .2s var(--fx-ease-dock),filter .2s,background-colo
       </div>
     </div>
 
-    <!-- ABA: AJUDA -->
     <div id="cv-p-ajuda" class="cv-pane">
       <div class="card">
         <h2>Instruções de Uso do Conversor CD-84</h2>
@@ -2109,7 +2071,6 @@ tbody tr{transition:transform .2s var(--fx-ease-dock),filter .2s,background-colo
   const logado = () => { if (!logadoSilencioso()) { alert("Acesso negado! Faça o login de administrador primeiro."); return false; } return true; };
   const xlsx = () => window.XLSX ? Promise.resolve() : new Promise((ok, er) => { const e = document.createElement("script"); e.src = "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"; e.onload = ok; e.onerror = () => er(new Error("Não foi possível carregar o leitor de planilhas.")); document.head.appendChild(e); });
 
-  // ---- aba no menu principal ----
   const btn = document.createElement("button"); btn.type = "button"; btn.className = "tab-btn"; btn.id = "btn-tab-pedidos"; btn.textContent = "Pedidos"; main.appendChild(btn);
   const sec = document.createElement("div"); sec.id = "tab-pedidos"; sec.className = "tab-conteudo"; sec.innerHTML = tpl.innerHTML;
   document.querySelector(".container").appendChild(sec);
@@ -2125,7 +2086,6 @@ tbody tr{transition:transform .2s var(--fx-ease-dock),filter .2s,background-colo
     sec.querySelectorAll(".cv-pane").forEach(p => p.classList.toggle("on", p.id === "cv-p-" + t.dataset.cvSub));
   });
 
-  // ---- conversor (código original) ----
   let excelBuffer = null;
   let currentItems = [];
   let paresCasados = [];
@@ -2378,8 +2338,6 @@ tbody tr{transition:transform .2s var(--fx-ease-dock),filter .2s,background-colo
 
   function aplicarCorrecaoItensCasados() {
     let notificacoes = [];
-    
-    // Limpar sinalizações anteriores
     currentItems.forEach(it => { delete it.autoCorrected; delete it.correctionType; });
 
     paresCasados.forEach(p => {
@@ -2612,7 +2570,6 @@ tbody tr{transition:transform .2s var(--fx-ease-dock),filter .2s,background-colo
 
   window.cv = { processarPedidos, limparTudo, copiarResultado, unificarDuplicados, cadastrarPar, removerPar, updateItem, deleteItem };
 })();
-
 </script>
 <script>
 /* Versão Mobile: escolha ao abrir + adaptações (a versão Desktop não muda) */
@@ -2636,7 +2593,6 @@ tbody tr{transition:transform .2s var(--fx-ease-dock),filter .2s,background-colo
   $("vs-back").addEventListener("click", e => { const b = e.target.closest("[data-v]"); if (!b) return; gravaV(b.dataset.v, $("vs-lembrar").checked); aplicar(b.dataset.v); });
   bt.onclick = () => { const v = root.classList.contains("mobile") ? "desktop" : "mobile"; gravaV(v, (() => { try { return !!localStorage.getItem(K); } catch (e) { return false; } })()); aplicar(v); };
 
-  // rótulos dos campos nos cartões (usa o cabeçalho de cada tabela)
   let ag = false;
   function rotular() {
     ag = false; if (!root.classList.contains("mobile")) return;
@@ -2648,7 +2604,6 @@ tbody tr{transition:transform .2s var(--fx-ease-dock),filter .2s,background-colo
   }
   new MutationObserver(() => { if (!ag) { ag = true; requestAnimationFrame(rotular); } }).observe(document.body, { childList: true, subtree: true });
 
-  // TV (aba Financeiro) reduzida para caber na tela
   function ajustaTV() {
     const f = $("frameTV"); if (!f) return; const w = f.parentElement;
     if (!root.classList.contains("mobile")) { f.style.transform = ""; w.style.height = ""; return; }
@@ -2656,14 +2611,12 @@ tbody tr{transition:transform .2s var(--fx-ease-dock),filter .2s,background-colo
   }
   addEventListener("resize", ajustaTV);
 
-  // aba ativa sempre visível no menu inferior
   function centraAba() { const a = document.querySelector(".container > .tabs .tab-btn.active"); if (a && root.classList.contains("mobile")) a.scrollIntoView({ inline: "center", block: "nearest", behavior: "smooth" }); }
   document.addEventListener("click", e => { if (e.target.closest(".container > .tabs .tab-btn")) setTimeout(centraAba, 60); });
 
   const v = lerV(), app = (matchMedia("(display-mode: standalone)").matches || navigator.standalone) && innerWidth < 820;
   if (v === "mobile" || v === "desktop") aplicar(v); else if (app) { gravaV("mobile", true); aplicar("mobile"); } else { bt.textContent = "📱 Mobile"; $("vs-back").classList.add("on"); }
 })();
-
 </script>
 <script>
 /* Mobile: cartões básicos + balão de detalhes e ações (Operação, Em viagem e Doca) */
@@ -2674,7 +2627,6 @@ tbody tr{transition:transform .2s var(--fx-ease-dock),filter .2s,background-colo
   let F = "todos", Q = "", sel = null, ag = false;
   if (!$("tabelaPatioCorpo")) return;
 
-  // resumo fixo + filtros
   document.querySelector("header").insertAdjacentHTML("afterend", '<div id="mb-strip"><div><b id="mb-a">0</b><small>Aguardando</small></div><div><b id="mb-d">0</b><small>Em doca</small></div><div><b id="mb-v">0</b><small>Em viagem</small></div><div><b id="mb-fat">-</b><small>Faturamento hoje</small></div></div>');
   $("tabelaPatioCorpo").closest("table").insertAdjacentHTML("beforebegin", '<div id="mb-fil"><div class="mb-ch"><button type="button" data-f="todos" class="on">Todos</button><button type="button" data-f="aguardando">Aguardando</button><button type="button" data-f="em doca">Em doca</button></div><input type="text" id="mb-q" class="input-busca" placeholder="Buscar placa, motorista ou filial..."></div>');
   document.body.insertAdjacentHTML("beforeend", '<div id="mb-sh"><div id="mb-box"><div class="mb-hd" id="mb-hd"><i></i><div><b id="mb-sh-t"></b><button type="button" class="vi-x" data-x="1">✕</button></div></div><div id="mb-sh-b"></div><div id="mb-sh-f"></div></div></div>');
@@ -2708,7 +2660,6 @@ tbody tr{transition:transform .2s var(--fx-ease-dock),filter .2s,background-colo
   new MutationObserver(ms => { if (ms.some(m => { const n = m.target.nodeType === 1 ? m.target : m.target.parentElement; return !n || !n.closest("#mb-sh,#mb-strip,#mb-fil,#mb-app,.mb-main,#ax-toasts,#vi-pop"); })) agenda(); }).observe(document.body, { childList: true, subtree: true });
   new MutationObserver(agenda).observe(root, { attributes: true, attributeFilter: ["class"] }); cartoes();
 
-  // balão (folha inferior)
   const achar = () => sel && sel.tb.isConnected && [...sel.tb.querySelectorAll("tr.mb-card")].find(t => t.dataset.k === sel.k);
   function montar(tr) {
     const tds = [...tr.querySelectorAll(":scope>td")], ac = tds[tds.length - 1];
@@ -2729,213 +2680,119 @@ tbody tr{transition:transform .2s var(--fx-ease-dock),filter .2s,background-colo
     if (t.closest("button")) { vib(40); return; } if (t.closest('strong[style*="1.1rem"]')) return;
     sel = { tb: tr.parentElement, k: tr.dataset.k }; montar(tr); $("mb-sh").classList.add("on"); vib(15);
   });
-  // arrastar para baixo fecha
   const hd = $("mb-hd"), bx = $("mb-box"); let y0 = null;
   hd.addEventListener("touchstart", e => { y0 = e.touches[0].clientY; bx.style.transition = "none"; }, { passive: true });
   hd.addEventListener("touchmove", e => { if (y0 !== null) bx.style.transform = "translateY(" + Math.max(0, e.touches[0].clientY - y0) + "px)"; }, { passive: true });
   hd.addEventListener("touchend", e => { if (y0 === null) return; const d = e.changedTouches[0].clientY - y0; bx.style.transition = ""; bx.style.transform = ""; y0 = null; if (d > 80) fechar(); });
   document.addEventListener("keydown", e => { if (e.key === "Escape") fechar(); });
 })();
-
 </script>
 <script>
 /* Mobile como app: barra do app, instalar, deslizar entre abas e PWA */
 (function () {
   const root = document.documentElement, $ = id => document.getElementById(id), ct = document.querySelector(".container");
   const standalone = matchMedia("(display-mode: standalone)").matches || navigator.standalone, ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
-  ct.insertAdjacentHTML("afterbegin", '<div id="mb-app"><img id="mb-av" alt="" style="display:none"><div class="nm"><span>Painel CD84</span><small id="mb-em">Visitante</small></div><button type="button" class="mb-b" id="mb-inst">⬇ Instalar</button><button type="button" class="mb-b sec" id="mb-ver" title="Versão desktop">💻</button><button type="button" class="mb-b sec" id="mb-auth">Entrar</button></div>');
-  let ip = null; if (standalone) $("mb-inst").style.display = "none";
-  addEventListener("beforeinstallprompt", e => { e.preventDefault(); ip = e; });
-  addEventListener("appinstalled", () => { ip = null; $("mb-inst").style.display = "none"; });
-  $("mb-inst").onclick = async () => {
-    if (ip) { ip.prompt(); await ip.userChoice; ip = null; return; }
-    alert(ios ? 'Para instalar no iPhone: toque em Compartilhar (□↑) e depois em "Adicionar à Tela de Início".' : 'Para instalar: abra o menu do navegador (⋮) e toque em "Instalar app" ou "Adicionar à tela inicial".');
-  };
-  $("mb-ver").onclick = () => $("btn-versao").click(); $("mb-auth").onclick = () => toggleAuth();
-  auth.onAuthStateChanged(u => { $("mb-auth").textContent = u ? "Sair" : "Entrar"; $("mb-em").textContent = u ? "Admin · " + u.email : "Visitante"; const a = $("mb-av"); a.src = u && u.photoURL ? u.photoURL : ""; a.style.display = u && u.photoURL ? "" : "none"; });
-  // deslizar o dedo troca de aba
-  let sx = 0, sy = 0, ok = false;
-  ct.addEventListener("touchstart", e => { sx = e.touches[0].clientX; sy = e.touches[0].clientY; ok = !e.target.closest("#mb-sh,#vi-pop,#cal-t,.cv-tbl,.bar-chart,.periodo-seletor,.container>.tabs,input,select,textarea,iframe"); }, { passive: true });
-  ct.addEventListener("touchend", e => {
-    if (!ok || !root.classList.contains("mobile")) return; const dx = e.changedTouches[0].clientX - sx, dy = e.changedTouches[0].clientY - sy; if (Math.abs(dx) < 90 || Math.abs(dy) > 45) return;
-    const bs = [...ct.querySelectorAll(":scope>.tabs>.tab-btn")], i = bs.findIndex(b => b.classList.contains("active")), n = bs[i + (dx < 0 ? 1 : -1)]; if (n) n.click();
-  }, { passive: true });
-  if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw-painel.js", { scope: "./painel.html" }).catch(() => {});
-})();
+  ct.insertAdjacentHTML("afterbegin", '<div id="mb-app"><img id="mb-av" alt="" style="display:none"><div class="nm"><span>Painel CD84</span><small id="mb-em">Visitante</small></div><button type="button" class="mb-b" id="mb-inst">⬇ Instalar</button><button type="button" class="mb-b sec" id="mb-ver" title="Versão desktop">💻</button><button type="button" class="mb-b" id="mb-auth">Entrar</button></div>');
 
+  firebase.auth().onAuthStateChanged(u => {
+    const av = $("mb-av"), em = $("mb-em"), bt = $("mb-auth");
+    if (u) { em.textContent = u.displayName || u.email; bt.textContent = "Sair"; bt.style.background = "linear-gradient(135deg,#e5324b,#ff6b7a)"; if (u.photoURL) { av.src = u.photoURL; av.style.display = ""; } }
+    else { em.textContent = "Visualização (Visitante)"; bt.textContent = "Entrar"; bt.style.background = ""; av.style.display = "none"; }
+  });
+  $("mb-auth").onclick = () => $("authBtn").click();
+  $("mb-ver").onclick = () => $("btn-versao").click();
+
+  let promptInst = null; const bi = $("mb-inst"); if (standalone) bi.style.display = "none";
+  addEventListener("beforeinstallprompt", e => { e.preventDefault(); promptInst = e; bi.style.display = ""; });
+  addEventListener("appinstalled", () => { bi.style.display = "none"; promptInst = null; });
+  bi.onclick = async () => {
+    if (promptInst) { promptInst.prompt(); await promptInst.userChoice; promptInst = null; return; }
+    alert(ios ? 'No Safari, toque em Compartilhar (quadrado com seta) e depois em "Adicionar à Tela de Início".' : 'Abra o menu do navegador (⋮) e toque em "Instalar aplicativo" ou "Adicionar à tela inicial".');
+  };
+
+  let sx = 0, sy = 0;
+  ct.addEventListener("touchstart", e => {
+    if (!root.classList.contains("mobile") || e.touches.length !== 1) { sx = 0; return; }
+    if (e.target.closest("input,select,textarea,table,.bar-chart,.periodo-seletor,.tabs")) { sx = 0; return; }
+    sx = e.touches[0].clientX; sy = e.touches[0].clientY;
+  }, { passive: true });
+  ct.addEventListener("touchend", e => {
+    if (!sx) return; const dx = e.changedTouches[0].clientX - sx, dy = e.changedTouches[0].clientY - sy; sx = 0;
+    if (Math.abs(dx) < 85 || Math.abs(dx) < Math.abs(dy) * 1.7) return;
+    const bs = [...document.querySelectorAll(".container>.tabs>.tab-btn")], i = bs.findIndex(b => b.classList.contains("active"));
+    const n = bs[i + (dx < 0 ? 1 : -1)]; if (n) n.click();
+  });
+
+  if ("serviceWorker" in navigator) navigator.serviceWorker.register("./sw.js").catch(() => {});
+})();
 </script>
 <script>
-/* Janela flutuante de formulário (substitui os prompt() do navegador) */
+/* Formulários no lugar dos pop-ups prompt(): todos os campos numa tela só */
 (function () {
+  const esc = t => String(t == null ? "" : t).replace(/[<>&"]/g, "");
   const back = document.createElement("div"); back.id = "fm-back"; document.body.appendChild(back);
-  const esc = t => String(t == null ? "" : t).replace(/[<>&"]/g, c => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;" }[c]));
-  const RXP = /^[A-Z]{3}-[0-9][A-Z0-9][0-9]{2}$/;
-  window.cd84Form = cfg => new Promise(res => {
-    back.innerHTML = `<div class="ed-card"><div class="ed-h"><b>${esc(cfg.title)}</b><button type="button" class="vi-x" data-fx title="Fechar">✕</button></div>${cfg.sub ? `<div class="ed-sub">${esc(cfg.sub)}</div>` : ""}${cfg.fields.map(f => `<label class="ed-l">${esc(f.label)}${f.required ? " *" : ""}<input id="fm-${f.id}" value="${esc(f.value)}" placeholder="${esc(f.placeholder || "")}" ${f.list ? `list="${f.list}"` : ""} ${f.max ? `maxlength="${f.max}"` : ""} autocomplete="off"${f.upper || f.placa ? ' style="text-transform:uppercase"' : ""}></label>`).join("")}<div class="ed-err" id="fm-err"></div><div class="ed-b"><button type="button" class="btn-action btn-cancel" data-fx>Cancelar</button><button type="button" class="btn-action btn-done" id="fm-ok">${esc(cfg.ok || "Salvar")}</button></div></div>`;
+  let res = null;
+  const fechar = v => { back.classList.remove("on"); if (res) { const r = res; res = null; r(v); } };
+  back.addEventListener("click", e => { if (e.target === back || e.target.closest("[data-fm-x]")) fechar(null); });
+  document.addEventListener("keydown", e => { if (e.key === "Escape" && back.classList.contains("on")) fechar(null); });
+
+  window.cd84Form = cfg => new Promise(resolve => {
+    res = resolve;
+    back.innerHTML = `<form class="ed-card" id="fm-f" novalidate><div class="ed-h"><b>${esc(cfg.title)}</b><button type="button" class="vi-x" data-fm-x title="Fechar">✕</button></div>
+      ${cfg.sub ? `<div class="ed-sub">${esc(cfg.sub)}</div>` : ""}
+      ${cfg.fields.map(f => `<label class="ed-l">${esc(f.label)}<input id="fm-${f.id}" value="${esc(f.value || "")}" placeholder="${esc(f.placeholder || "")}" ${f.list ? `list="${f.list}"` : ""} ${f.max ? `maxlength="${f.max}"` : ""} autocomplete="off" style="${f.placa ? "text-transform:uppercase;font-weight:800;letter-spacing:1px" : ""}"></label>`).join("")}
+      <div class="ed-err" id="fm-err"></div>
+      <div class="ed-b"><button type="button" class="btn-action btn-cancel" data-fm-x>Cancelar</button><button type="submit" class="btn-action btn-done">${esc(cfg.ok || "Confirmar")}</button></div></form>`;
     back.classList.add("on");
-    const el = f => document.getElementById("fm-" + f.id);
-    cfg.fields.forEach(f => { if (f.placa) { const i = el(f); i.oninput = () => { let v = i.value.toUpperCase().replace(/[^A-Z0-9]/g, ""); if (v.length > 3) v = v.slice(0, 3) + "-" + v.slice(3, 7); i.value = v; }; } });
-    const fim = r => { back.classList.remove("on"); back.innerHTML = ""; document.removeEventListener("keydown", kd, true); res(r); };
-    const ok = () => {
-      const r = {}, err = document.getElementById("fm-err"); cfg.fields.forEach(f => { const v = el(f).value.trim(); r[f.id] = f.placa || f.upper ? v.toUpperCase() : v; });
+    cfg.fields.filter(f => f.placa).forEach(f => {
+      const el = document.getElementById("fm-" + f.id);
+      el.oninput = () => { let v = el.value.toUpperCase().replace(/[^A-Z0-9]/g, ""); if (v.length > 3) v = v.substring(0, 3) + "-" + v.substring(3, 7); el.value = v; };
+    });
+    setTimeout(() => { const el = document.getElementById("fm-" + cfg.fields[0].id); if (el) { el.focus(); el.select && el.select(); } }, 30);
+    document.getElementById("fm-f").onsubmit = e => {
+      e.preventDefault(); const out = {}, err = document.getElementById("fm-err"); err.textContent = "";
       for (const f of cfg.fields) {
-        if (f.required && !r[f.id]) { err.textContent = "Preencha: " + f.label; el(f).focus(); return; }
-        if (f.placa && r[f.id] && !RXP.test(r[f.id])) { err.textContent = "Formato de placa inválido. Ex.: AAA-0A00"; el(f).focus(); return; }
+        let v = document.getElementById("fm-" + f.id).value.trim(); if (f.placa) v = v.toUpperCase();
+        if (f.required && !v) { err.textContent = "Informe: " + f.label; document.getElementById("fm-" + f.id).focus(); return; }
+        if (f.placa && !/^[A-Z]{3}-[0-9][A-Z0-9][0-9]{2}$/.test(v)) { err.textContent = "Formato de placa inválido (ex.: AAA-0A00)."; document.getElementById("fm-" + f.id).focus(); return; }
+        out[f.id] = v;
       }
-      const m = cfg.validate && cfg.validate(r); if (m) { err.textContent = m; return; } fim(r);
+      if (cfg.validate) { const m = cfg.validate(out); if (m) { err.textContent = m; return; } }
+      fechar(out);
     };
-    const kd = e => { if (e.key === "Escape") { e.stopPropagation(); fim(null); } else if (e.key === "Enter" && e.target.tagName === "INPUT") { e.preventDefault(); ok(); } };
-    document.addEventListener("keydown", kd, true);
-    document.getElementById("fm-ok").onclick = ok; back.onclick = e => { if (e.target === back || e.target.closest("[data-fx]")) fim(null); };
-    setTimeout(() => { const i = back.querySelector("input"); if (i) i.focus(); }, 60);
   });
 })();
-
 </script>
 <script>
-/* Tema claro/escuro (escolha salva neste aparelho) */
+/* Modo claro / escuro (segue o aparelho por padrão; botão alterna e salva a escolha) */
 (function () {
-  const root = document.documentElement, K = "cd84_tema", mq = matchMedia("(prefers-color-scheme: dark)");
-  const atual = () => root.getAttribute("data-tema") || (root.classList.contains("mobile") && mq.matches ? "dark" : "light");
+  const K = "cd84_tema", root = document.documentElement, mq = matchMedia("(prefers-color-scheme: dark)");
+  const ler = () => { try { return localStorage.getItem(K); } catch (e) { return null; } };
+  const atual = () => ler() || (mq.matches ? "dark" : "light");
+
   const ua = document.querySelector(".user-area"), bt = document.createElement("button");
-  bt.type = "button"; bt.className = "btn-login"; bt.id = "btn-tema"; bt.title = "Trocar tema"; if (ua) ua.insertBefore(bt, ua.firstChild);
+  bt.type = "button"; bt.className = "btn-login"; bt.id = "btn-tema"; if (ua) ua.insertBefore(bt, ua.firstChild);
   const mbBar = document.getElementById("mb-app"); let mb = null;
-  if (mbBar) { mb = document.createElement("button"); mb.type = "button"; mb.className = "mb-b sec"; mb.id = "mb-tema"; mb.title = "Trocar tema"; mbBar.insertBefore(mb, document.getElementById("mb-ver")); }
-  const rot = () => {
-    const d = atual() === "dark"; bt.textContent = d ? "☀️ Claro" : "🌙 Escuro"; if (mb) mb.textContent = d ? "☀️" : "🌙";
-    const m = document.querySelector('meta[name="theme-color"]'); if (m) m.content = d ? "#0a1022" : "#063b91";
-  };
-  const alterna = () => {
-    const n = atual() === "dark" ? "light" : "dark"; root.classList.add("tema-trans"); root.setAttribute("data-tema", n);
-    try { localStorage.setItem(K, n); } catch (e) {} rot(); setTimeout(() => root.classList.remove("tema-trans"), 450);
-  };
-  bt.onclick = alterna; if (mb) mb.onclick = alterna; rot();
-  root.addEventListener("cd84-modo", rot); if (mq.addEventListener) mq.addEventListener("change", rot);
-})();
+  if (mbBar) { mb = document.createElement("button"); mb.type = "button"; mb.className = "mb-b sec"; mb.id = "mb-tema"; mbBar.insertBefore(mb, document.getElementById("mb-ver")); }
 
-</script>
-<script>
-/* Efeitos: blocos que se encaixam coluna a coluna + números contando do zero + montagem de abertura + nível de animação.
-   Só adiciona classes/estilos; não toca em dados, formulários ou listeners existentes. Sem desfoque (leve e fluido). */
-(function () {
-  "use strict";
-  const CFG = { col: 110, row: 65, atrasoMax: 700, max: 26, linhas: 10, passoLinha: 35, dist: 120, contagemMs: 900 };
-  const root = document.documentElement, reduz = matchMedia("(prefers-reduced-motion: reduce)");
-  const PANES = ".tab-conteudo,.dc-pane,.cv-pane,.fr-sub,#fr-proximas";            // painéis que aparecem/desaparecem
-  const BLOCOS = ".card,.stat-card,.cal-day,.fila-item", INTERNOS = ".stat-card,.cal-day";
-  const NUM = ".stat-numero,#dc-dia,#mb-a,#mb-d,#mb-v";                            // números com contagem (#dc-mes já tem a sua)
-  const nivel = () => reduz.matches ? "off" : (root.getAttribute("data-anim") || "full");
-  const mobile = () => root.classList.contains("mobile"), lim = (v, a, b) => Math.max(a, Math.min(b, v));
-  const visivel = (cls, el) => el.matches(".tab-conteudo") ? /(^|\s)ativo(\s|$)/.test(cls)
-    : el.matches(".dc-pane,.cv-pane") ? /(^|\s)on(\s|$)/.test(cls) : !/(^|\s)hidden(\s|$)/.test(cls);
-  const limpar = e => { e.classList.remove("fx-dock", "fx-snap", "fx-row"); e.style.removeProperty("--fx-x"); e.style.removeProperty("--fx-y"); e.style.removeProperty("--d"); };
-  const livre = e => e.offsetParent !== null && !e.contains(document.activeElement);   // visível e sem campo em edição
-
-  // ---- encaixe: agrupa por coluna (esq.→dir.) e, dentro dela, de cima para baixo; cada bloco vem do seu lado ----
-  function dock(lista, base, k, mob) {
-    const info = lista.map(e => ({ e, r: e.getBoundingClientRect() })), cols = [];
-    info.slice().sort((a, b) => a.r.left - b.r.left).forEach(o => { const c = cols.find(c => Math.abs(c.left - o.r.left) < 70); c ? c.itens.push(o) : cols.push({ left: o.r.left, itens: [o] }); });
-    const plano = [], lvl = nivel();
-    cols.sort((a, b) => a.left - b.left).forEach((c, ci) => c.itens.sort((a, b) => a.r.top - b.r.top).forEach((o, ri) => plano.push({ o, ci, ri })));
-    plano.slice(0, CFG.max).forEach(({ o, ci, ri }, n) => {
-      const cx = (o.r.left + o.r.width / 2) / innerWidth - .5, cy = (o.r.top + o.r.height / 2) / innerHeight - .5;
-      let x = mob ? (n % 2 ? 1 : -1) * 36 : lim(cx * 2 * CFG.dist, -CFG.dist, CFG.dist), y = mob ? 26 : lim(cy * 180, -90, 90);
-      if (!mob && Math.abs(x) < 30 && Math.abs(y) < 30) y = 44;
-      o.e.__fxD = Math.min(base + (mob ? 0 : ci * CFG.col) + ri * CFG.row, base + CFG.atrasoMax);
-      limpar(o.e); o.e.style.setProperty("--fx-x", Math.round(x * k) + "px"); o.e.style.setProperty("--fx-y", Math.round(y * k) + "px"); o.e.style.setProperty("--d", o.e.__fxD + "ms");
-      o.alvo = true;
-    });
-    void root.offsetWidth;                                                         // 1 única releitura de layout para reiniciar as animações
-    plano.slice(0, CFG.max).forEach(({ o }) => { o.e.classList.add("fx-dock"); if (lvl === "full") o.e.classList.add("fx-snap"); });
+  function pintar(animar) {
+    const t = atual(), escuro = t === "dark";
+    if (animar) { root.classList.add("tema-trans"); setTimeout(() => root.classList.remove("tema-trans"), 400); }
+    bt.textContent = escuro ? "☀️ Claro" : "🌙 Escuro"; bt.title = "Alternar modo claro / escuro";
+    if (mb) { mb.textContent = escuro ? "☀️" : "🌙"; mb.title = bt.title; }
+    const mc = document.querySelector('meta[name="theme-color"]'); if (mc) mc.content = escuro ? "#0a1022" : "#063b91";
   }
-  function linhas(raiz, base) {                                                    // primeiras linhas de cada tabela entram em cascata curta
-    raiz.querySelectorAll("tbody").forEach(tb => {
-      if (tb.offsetParent === null) return;
-      [...tb.rows].slice(0, CFG.linhas).filter(livre).forEach((tr, i) => { limpar(tr); tr.style.setProperty("--d", (base + i * CFG.passoLinha) + "ms"); tr.classList.add("fx-row"); });
-    });
+  function trocar() {
+    const novo = atual() === "dark" ? "light" : "dark";
+    root.setAttribute("data-tema", novo);
+    try { localStorage.setItem(K, novo); } catch (e) {}
+    pintar(true);
   }
-  function montar(pane, base) {
-    const lvl = nivel(); if (lvl === "off") return; base = base || 0;
-    const blocos = [...pane.querySelectorAll(BLOCOS)].filter(e => livre(e) && !e.querySelector(INTERNOS));
-    dock(blocos, base, lvl === "reduced" ? .4 : 1, mobile());
-    linhas(pane, base + 240);
-    pane.querySelectorAll(NUM).forEach(el => { const b = el.closest(".stat-card,.card,.cal-day"); contagemEntrada(el, ((b && b.__fxD) || base) + 380); });
-  }
-  function abertura() {                                                            // montagem inicial: topo desce, menu sobe, depois os blocos
-    const lvl = nivel(); if (lvl === "off") return; const k = lvl === "reduced" ? .4 : 1;
-    [["header", 0, -70], [".banner-aniversario", 0, -50], ["#mb-app", 0, -50], ["#mb-strip", 90, -40], [".container > .tabs", 160, 80]].forEach(([s, d, y]) => {
-      const e = document.querySelector(s); if (!e || e.offsetParent === null) return;
-      limpar(e); e.style.setProperty("--fx-x", "0px"); e.style.setProperty("--fx-y", Math.round(y * k) + "px"); e.style.setProperty("--d", d + "ms"); e.classList.add("fx-dock");
-    });
-    const a = document.querySelector(".tab-conteudo.ativo"); if (a) montar(a, 220);
-  }
-  function tabela(tb) {                                                            // 1ª carga de tabela vazia (as atualizações seguintes não animam)
-    const n = tb.rows.length, antes = tb.__fxN || 0; tb.__fxN = n;
-    if (!antes && n && nivel() !== "off" && tb.offsetParent !== null) linhas({ querySelectorAll: () => [tb] }, 120);
-  }
-  document.addEventListener("animationend", e => {                                 // devolve o elemento ao estado normal
-    const t = e.target, n = e.animationName;
-    if (n === "fxSnap" || n === "fxRow" || (n === "fxDock" && !t.classList.contains("fx-snap"))) limpar(t);
-  }, true);
-
-  // ---- contagem: do zero até o valor ao abrir a tela; do mostrado até o novo quando o valor muda ----
-  function ler(txt) {
-    const m = /^(\D*?)(-?\d[\d.]*(?:,\d+)?)(\D*)$/.exec(txt.trim()); if (!m) return null;
-    const num = m[2], ponto = !num.includes(",") && /^-?\d+\.\d{1,2}$/.test(num);   // "12.5" = decimal; "1.234" = milhar
-    const d = ponto ? num.split(".")[1].length : (num.split(",")[1] || "").length;
-    return { p: m[1], s: m[3], d, ponto, v: ponto ? parseFloat(num) : parseFloat(num.replace(/\./g, "").replace(",", ".")) };
-  }
-  const fmt = (n, v) => n.p + (n.ponto ? v.toFixed(n.d) : v.toLocaleString("pt-BR", { minimumFractionDigits: n.d, maximumFractionDigits: n.d })) + n.s;
-  const estado = el => el.__fx || (el.__fx = { w: null, cur: null, raf: 0, final: null, t: 0 });
-  function animar(alvo, de, novo, fim) {
-    const st = estado(alvo), t0 = performance.now(), dur = nivel() === "reduced" ? 550 : CFG.contagemMs; cancelAnimationFrame(st.raf); st.final = fim;
-    const passo = t => {
-      const p = Math.min(1, (t - t0) / dur), v = de + (novo.v - de) * (1 - Math.pow(1 - p, 3));
-      st.cur = v; st.w = p < 1 ? fmt(novo, v) : fim; alvo.textContent = st.w;
-      if (p < 1) st.raf = requestAnimationFrame(passo); else { st.raf = 0; st.cur = novo.v; }
-    };
-    st.raf = requestAnimationFrame(passo);
-  }
-  function contagemEntrada(el, atraso) {                                           // mostra zero já e começa a contar quando o bloco assenta
-    if (!livre(el) || nivel() === "off") return;
-    const st = estado(el), fim = st.raf && st.final ? st.final : el.textContent, n = ler(fim); if (!n) return;
-    clearTimeout(st.t); cancelAnimationFrame(st.raf); st.final = fim; st.cur = 0; st.w = fmt(n, 0); el.textContent = st.w;
-    st.t = setTimeout(() => animar(el, 0, n, fim), atraso);
-  }
-  function contar(node) {
-    const el = node.nodeType === 1 ? node : node.parentElement; if (!el || !el.closest) return;
-    const alvo = el.closest(NUM); if (!alvo) return;
-    const st = estado(alvo), txt = alvo.textContent;
-    if (txt === st.w) return;                                                      // foi a nossa própria escrita
-    clearTimeout(st.t); const novo = ler(txt); if (!novo || nivel() === "off") { st.cur = novo ? novo.v : null; return; }
-    const de = st.cur != null ? st.cur : 0; if (de !== novo.v) animar(alvo, de, novo, txt);
-  }
-
-  // ---- um único observador, filtrado: só painéis que ficaram visíveis, tbody e números ----
-  new MutationObserver(ms => {
-    for (const m of ms) {
-      if (m.type === "attributes") {
-        const el = m.target;
-        if (el.matches && el.matches(PANES) && !visivel(m.oldValue || "", el) && visivel(el.className, el)) montar(el);
-      } else if (m.type === "childList" && m.target.tagName === "TBODY") tabela(m.target);
-      if (m.type !== "attributes") contar(m.target);
-    }
-  }).observe(document.body, { subtree: true, attributes: true, attributeFilter: ["class"], attributeOldValue: true, childList: true, characterData: true });
-
-  // ---- botão de nível: Completas / Reduzidas / Desligadas (salvo neste aparelho) ----
-  const NIVEIS = [["full", "Completas", "🎞"], ["reduced", "Reduzidas", "🎞·"], ["off", "Desligadas", "🎞✕"]];
-  const ua = document.querySelector(".user-area"), bt = document.createElement("button"), mbBar = document.getElementById("mb-app"); let mb = null;
-  bt.type = "button"; bt.className = "btn-login"; bt.id = "btn-anim"; if (ua) ua.insertBefore(bt, ua.firstChild);
-  if (mbBar) { mb = document.createElement("button"); mb.type = "button"; mb.className = "mb-b sec"; mb.id = "mb-anim"; mbBar.insertBefore(mb, document.getElementById("mb-tema") || document.getElementById("mb-ver")); }
-  const rot = () => { const n = NIVEIS.find(x => x[0] === (root.getAttribute("data-anim") || "full")) || NIVEIS[0]; bt.textContent = "🎞 " + n[1]; bt.title = "Animações: clique para alternar"; if (mb) { mb.textContent = n[2]; mb.title = "Animações: " + n[1]; } };
-  const troca = () => { const i = NIVEIS.findIndex(x => x[0] === (root.getAttribute("data-anim") || "full")), n = NIVEIS[(i + 1) % 3][0]; root.setAttribute("data-anim", n); try { localStorage.setItem("cd84_anim", n); } catch (e) {} rot(); };
-  bt.onclick = troca; if (mb) mb.onclick = troca; rot();
-
-  // montagem de abertura (se a escolha de versão estiver aberta, espera ela fechar)
-  const vs = document.getElementById("vs-back");
-  if (vs && vs.classList.contains("on")) { const o = new MutationObserver(() => { if (!vs.classList.contains("on")) { o.disconnect(); requestAnimationFrame(abertura); } }); o.observe(vs, { attributes: true, attributeFilter: ["class"] }); }
-  else abertura();
+  bt.onclick = trocar; if (mb) mb.onclick = trocar;
+  mq.addEventListener("change", () => { if (!ler()) pintar(true); });
+  pintar(false);
 })();
 </script>
+<script src="efeitos.js"></script>
 </body>
 </html>
