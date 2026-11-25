@@ -1169,8 +1169,9 @@ tbody tr{transition:transform .2s var(--fx-ease-dock),filter .2s,background-colo
         if(!usuarioLogado) { alert("Acesso negado! Faça o login de administrador primeiro."); return; }
         const r = await window.cd84Form({ title: "Editar rota", fields: [{ id: "f", label: "Filial destino", value: filialAtual, list: "dl-f" }, { id: "d", label: "Doca", value: docaAtual, list: "dl-d" }, { id: "c", label: "Conferente", value: conferenteAtual }], ok: "Salvar" });
         if (!r) return;
-        db.collection("fila_patio").doc(id).update({ filial: r.f, doca: r.d, conferente: r.c })
-        .catch(err => alert("Erro ao atualizar dados: Permissão Negada."));
+        const F = firebase.firestore.FieldValue;
+        db.collection("fila_patio").doc(id).update({ filial: r.f.toUpperCase() || "-", doca: r.d.toUpperCase() || "-", conferente: r.c || "-", filialManual: true, filialAuto: F.delete(), filialBase: F.delete() })
+        .catch(err => alert("Erro ao atualizar dados: " + err.message));
     };
 
     window.cancelarChegada = (id, placa) => {
@@ -1519,6 +1520,7 @@ tbody tr{transition:transform .2s var(--fx-ease-dock),filter .2s,background-colo
       ativos.filter(elegivel).forEach(x => veicAtivos(x).forEach(p => { const e = m[norm(p)], f = x.filial.trim(); if (e && !e.lojas.includes(f)) e.lojas.push(f); }));
       const b = db.batch(), D = F.delete(); let n = 0;
       Object.values(m).forEach(({ v, lojas }) => {
+        if (v.filialManual) return;
         const auto = v.filialAuto && v.filial === v.filialAuto, ref = db.collection("fila_patio").doc(v.id);
         if (lojas.length >= 2) { const alvo = lojas.join("/"); if (v.filial !== alvo) { b.update(ref, { filial: alvo, filialBase: auto ? (v.filialBase || "") : (v.filial || ""), filialAuto: alvo }); n++; } }
         else if (auto) { b.update(ref, { filial: v.filialBase || "-", filialBase: D, filialAuto: D }); n++; }
@@ -1831,7 +1833,7 @@ tbody tr{transition:transform .2s var(--fx-ease-dock),filter .2s,background-colo
     if (window.cd84RetornoRapido(f.filial)) {
       const { id, ...d } = f;
       b.set(db.collection("fila_patio").doc(), { ...d, status: "Concluido", timestampSaida: agora, viagemRapida: true });
-      b.update(ref, { status: "Aguardando", filial: "-", doca: "-", conferente: "-", timestampChamada: firebase.firestore.FieldValue.delete(), timestampSaida: firebase.firestore.FieldValue.delete(), filialBase: firebase.firestore.FieldValue.delete(), filialAuto: firebase.firestore.FieldValue.delete() });
+      b.update(ref, { status: "Aguardando", filial: "-", doca: "-", conferente: "-", timestampChamada: firebase.firestore.FieldValue.delete(), timestampSaida: firebase.firestore.FieldValue.delete(), filialBase: firebase.firestore.FieldValue.delete(), filialAuto: firebase.firestore.FieldValue.delete(), filialManual: firebase.firestore.FieldValue.delete() });
     } else b.update(ref, { status: "Em Viagem", timestampSaida: agora });
   };
 
