@@ -6,7 +6,7 @@
   const root = document.documentElement, reduz = matchMedia("(prefers-reduced-motion: reduce)");
   const PANES = ".tab-conteudo,.dc-pane,.cv-pane,.fr-sub,#fr-proximas";            // painéis que aparecem/desaparecem
   const BLOCOS = ".card,.stat-card,.cal-day,.fila-item", INTERNOS = ".stat-card,.cal-day";
-  const NUM = ".stat-numero,#mb-a,#mb-d,#mb-v";                                    // números com contagem (#dc-dia e #dc-mes têm controle próprio)
+  const NUM = ".stat-numero,#dc-dia,#mb-a,#mb-d,#mb-v";                            // números com contagem (#dc-mes já tem a sua)
   const nivel = () => reduz.matches ? "off" : (root.getAttribute("data-anim") || "full");
   const mobile = () => root.classList.contains("mobile"), lim = (v, a, b) => Math.max(a, Math.min(b, v));
   const visivel = (cls, el) => el.matches(".tab-conteudo") ? /(^|\s)ativo(\s|$)/.test(cls)
