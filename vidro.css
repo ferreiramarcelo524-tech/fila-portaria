@@ -1,0 +1,45 @@
+/* ===== Vidro "liquid glass" só nas BARRAS e nos BOTÕES (cartões, tabelas e campos não mudam) =====
+   Equivalente web do expo-glass-effect (que só existe para apps React Native/Expo).
+   Ajuste a intensidade nestas variáveis. Colocar DEPOIS dos outros <style>. */
+:root{--gl-blur:22px;--gl-sat:180%;--gl-fill:rgba(255,255,255,.36);--gl-hi:rgba(255,255,255,.55);--gl-lo:rgba(255,255,255,.06);--gl-edge:rgba(255,255,255,.60);--gl-shade:rgba(0,0,0,.10);--gl-shadow:rgba(20,40,100,.18);--gl-bar:rgba(255,255,255,.34)}
+html[data-tema="dark"]{--gl-fill:rgba(255,255,255,.08);--gl-hi:rgba(255,255,255,.20);--gl-lo:rgba(255,255,255,.02);--gl-edge:rgba(255,255,255,.20);--gl-shade:rgba(0,0,0,.35);--gl-shadow:rgba(0,0,0,.45);--gl-bar:rgba(20,30,56,.42)}
+@media(prefers-color-scheme:dark){html.mobile:not([data-tema="light"]){--gl-fill:rgba(255,255,255,.08);--gl-hi:rgba(255,255,255,.20);--gl-lo:rgba(255,255,255,.02);--gl-edge:rgba(255,255,255,.20);--gl-shade:rgba(0,0,0,.35);--gl-shadow:rgba(0,0,0,.45);--gl-bar:rgba(20,30,56,.42)}}
+
+/* ---------- BARRAS: menu principal, sub-abas, topo, barra do app e resumo do mobile ---------- */
+html:is(:root,.mobile,[data-tema]) .tabs,
+html:is(:root,.mobile,[data-tema]) #mb-app,
+html:is(:root,.mobile,[data-tema]) #mb-strip{background-color:var(--gl-bar)!important;background-image:linear-gradient(180deg,var(--gl-hi),var(--gl-lo) 48%)!important;-webkit-backdrop-filter:blur(var(--gl-blur)) saturate(var(--gl-sat));backdrop-filter:blur(var(--gl-blur)) saturate(var(--gl-sat));border:1px solid var(--gl-edge)!important;box-shadow:inset 0 1px 0 var(--gl-hi),inset 0 -1px 0 var(--gl-shade),0 10px 30px var(--gl-shadow)!important}
+html.mobile #mb-app{padding:8px 10px;border-radius:18px}
+html.mobile #mb-strip div{background:var(--gl-fill)!important;border:1px solid var(--gl-edge)}
+html:is(:root,.mobile,[data-tema]) header{background-image:linear-gradient(180deg,rgba(255,255,255,.26),rgba(255,255,255,0) 52%),linear-gradient(115deg,rgba(10,31,92,.90),rgba(23,70,209,.86) 55%,rgba(43,134,255,.82))!important;-webkit-backdrop-filter:blur(20px) saturate(170%);backdrop-filter:blur(20px) saturate(170%);border:1px solid rgba(255,255,255,.30)!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.50),inset 0 -1px 0 rgba(0,0,0,.18),0 18px 40px rgba(23,70,209,.30)!important}
+/* menu inferior do mobile: abas viram botões de vidro */
+html.mobile .container>.tabs .tab-btn:not(.active){background:linear-gradient(180deg,var(--gl-hi),var(--gl-lo) 60%),var(--gl-fill)!important;border:1px solid var(--gl-edge)!important;box-shadow:inset 0 1px 0 var(--gl-hi)!important}
+html.mobile .container>.tabs .tab-btn.active{background:linear-gradient(180deg,rgba(255,255,255,.40),rgba(255,255,255,0) 52%),linear-gradient(135deg,rgba(7,59,149,.92),rgba(11,98,214,.88))!important;border:1px solid rgba(255,255,255,.38)!important;border-bottom:3px solid #e30613!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.55),0 8px 18px rgba(11,98,214,.35)!important}
+html:is(:root,.mobile,[data-tema]) .tab-pill{background:linear-gradient(180deg,rgba(255,255,255,.42),rgba(255,255,255,0) 55%),linear-gradient(135deg,rgba(23,70,209,.90),rgba(43,134,255,.86))!important;border:1px solid rgba(255,255,255,.40);box-shadow:inset 0 1px 0 rgba(255,255,255,.60),0 8px 18px rgba(31,91,255,.38)!important}
+
+/* ---------- BOTÕES ---------- */
+html:is(:root,.mobile,[data-tema]) :is(.btn-action,.btn-login,.periodo-btn,.mb-b,.mb-ch button,.vi-x){position:relative;border:1px solid var(--gl-edge)!important;-webkit-backdrop-filter:blur(10px) saturate(170%);backdrop-filter:blur(10px) saturate(170%);box-shadow:inset 0 1px 0 var(--gl-hi),inset 0 -1px 0 var(--gl-shade),0 6px 16px var(--gl-shadow)!important}
+html:is(:root,.mobile,[data-tema]) :is(.vadd,.cal-add){background-color:var(--gl-fill)!important;background-image:linear-gradient(180deg,var(--gl-hi),var(--gl-lo) 60%)!important;-webkit-backdrop-filter:blur(10px) saturate(170%);backdrop-filter:blur(10px) saturate(170%);box-shadow:inset 0 1px 0 var(--gl-hi)!important}
+html:is(:root,.mobile,[data-tema]) tbody .btn-action{-webkit-backdrop-filter:none;backdrop-filter:none}   /* tabelas grandes: vidro sem desfoque (leve) */
+/* cores (vidro tingido) */
+html:is(:root,.mobile,[data-tema]) .btn-call{background:linear-gradient(180deg,rgba(255,255,255,.42),rgba(255,255,255,0) 55%),linear-gradient(135deg,rgba(23,70,209,.80),rgba(43,134,255,.76))!important}
+html:is(:root,.mobile,[data-tema]) :is(.btn-done,.btn-add){background:linear-gradient(180deg,rgba(255,255,255,.42),rgba(255,255,255,0) 55%),linear-gradient(135deg,rgba(14,159,119,.80),rgba(43,217,160,.74))!important}
+html:is(:root,.mobile,[data-tema]) .btn-cancel{background:linear-gradient(180deg,rgba(255,255,255,.40),rgba(255,255,255,0) 55%),linear-gradient(135deg,rgba(229,50,75,.82),rgba(255,107,122,.76))!important}
+html:is(:root,.mobile,[data-tema]) .btn-edit{background:linear-gradient(180deg,rgba(255,255,255,.50),rgba(255,255,255,0) 55%),linear-gradient(135deg,rgba(255,176,32,.86),rgba(255,209,102,.80))!important;color:#4a3000!important}
+html:is(:root,.mobile,[data-tema]) :is(.btn-move,.btn-export){background:linear-gradient(180deg,rgba(255,255,255,.38),rgba(255,255,255,0) 55%),linear-gradient(135deg,rgba(85,98,126,.82),rgba(120,137,168,.76))!important}
+/* botão Login/Sair do topo (a cor inline vira vidro; vermelho quando logado) */
+html:is(:root,.mobile,[data-tema]) .btn-login{background:linear-gradient(180deg,rgba(255,255,255,.38),rgba(255,255,255,.04) 55%),rgba(255,255,255,.20)!important;color:#fff!important}
+html:is(:root,.mobile,[data-tema]) #authBtn[style*="231, 76, 60"]{background:linear-gradient(180deg,rgba(255,255,255,.38),rgba(255,255,255,0) 55%),linear-gradient(135deg,rgba(229,50,75,.82),rgba(255,107,122,.76))!important}
+/* botões de seleção (períodos, sub-abas, filtros) */
+html:is(:root,.mobile,[data-tema]) :is(.periodo-btn,.mb-ch button,.mb-b.sec,.vi-x){background:linear-gradient(180deg,var(--gl-hi),var(--gl-lo) 60%),var(--gl-fill)!important}
+html:is(:root,.mobile,[data-tema]) :is(.periodo-btn.active,.mb-ch button.on){background:linear-gradient(180deg,rgba(255,255,255,.42),rgba(255,255,255,0) 55%),linear-gradient(135deg,rgba(23,70,209,.88),rgba(43,134,255,.82))!important;color:#fff!important;border-color:rgba(255,255,255,.40)!important}
+html:is(:root,.mobile,[data-tema]) .mb-b:not(.sec){background:linear-gradient(180deg,rgba(255,255,255,.40),rgba(255,255,255,0) 55%),linear-gradient(135deg,rgba(7,59,149,.90),rgba(11,98,214,.84))!important}
+
+/* ---------- Compatibilidade e acessibilidade ---------- */
+@supports not ((-webkit-backdrop-filter:blur(1px)) or (backdrop-filter:blur(1px))){
+  :root{--gl-bar:rgba(255,255,255,.90)}html[data-tema="dark"]{--gl-bar:rgba(20,30,56,.94)}
+}
+@media (prefers-reduced-transparency:reduce){
+  html .tabs,html #mb-app,html #mb-strip,html header,html :is(.btn-action,.btn-login,.periodo-btn,.mb-b,.mb-ch button,.vi-x,.vadd,.cal-add){-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
+  :root{--gl-bar:rgba(255,255,255,.92)}html[data-tema="dark"]{--gl-bar:rgba(20,30,56,.95)}
+}
